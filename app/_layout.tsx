@@ -15,6 +15,12 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    OrbitronReg: require('../assets/fonts/Orbitron-Regular.ttf'),
+    OrbitronSb: require('../assets/fonts/Orbitron-SemiBold.ttf'),
+    OrbitronMd: require('../assets/fonts/Orbitron-Medium.ttf'),
+    OrbitronBold: require('../assets/fonts/Orbitron-Bold.ttf'),
+    OrbitronEx: require('../assets/fonts/Orbitron-ExtraBold.ttf'),
+    MegamaxJonathanToo: require('../assets/fonts/MegamaxJonathanToo.ttf'),
   });
 
   useEffect(() => {
@@ -29,9 +35,10 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(routes)/onboarding/index" />
+        <Stack.Screen name="(routes)/home/index" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
