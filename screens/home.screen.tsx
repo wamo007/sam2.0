@@ -1,121 +1,210 @@
-import { Alert, Button, Image, Pressable, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React, { useState } from 'react'
+import { Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useEffect, useRef, useState } from 'react'
 import { dummyMessages } from '../constants';
+import MessageInput from '../components/MessageInput';
 import { LinearGradient } from 'expo-linear-gradient'
 import { scale } from 'react-native-size-matters'
-import {
-    ExpoSpeechRecognitionModule,
-    useSpeechRecognitionEvent,
-  } from "expo-speech-recognition";
+import { useSpeechRecognition } from '../components/SpeechRecognition';
 
 export default function HomeScreen() {
-
+    const [keyboardEnabled, setKeyboardEnabled] = useState(false);
     const [messages, setMessages] = useState(dummyMessages);
-    const [recognizing, setRecognizing] = useState(false);
+    const scrollViewRef = useRef<ScrollView>(null);
 
-    useSpeechRecognitionEvent("start", () => setRecognizing(true));
-    useSpeechRecognitionEvent("end", () => setRecognizing(false));
-    useSpeechRecognitionEvent("result", (event) => {
-        appendMessage(event.results[0]?.transcript);
-    });
-    useSpeechRecognitionEvent("error", (event) => {
-        console.log("error code:", event.error, "error message:", event.message);
-    });
+    useEffect(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, [messages]);
 
-    const appendMessage = (newMessage:string) => {
-        setMessages((prevMessages) => [
-            ...prevMessages, 
-            { role: "user", content: newMessage },
-        ]);
-    };
-
-    const handleStart = async () => {
-        const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-        if (!result.granted) {
-            console.warn("Permissions not granted", result);
-        return;
+    const { recognizing, startRecognition, stopRecognition } = useSpeechRecognition({
+        onStart: () => {},
+        onEnd: (finalTranscript) => {
+            appendMessage(finalTranscript, false);
+            // Remove any empty draft messages
+            setMessages(prev => prev.filter(msg => 
+                !(msg.role === "user" && msg.isDraft && !msg.content.trim())
+            ));
+        },
+        onTranscriptUpdate: (transcript, isDraft) => {
+            appendMessage(transcript, isDraft);
+        },
+        onError: (error) => {
+            console.log("Speech recognition error:", error);
         }
-        // Start speech recognition
-        ExpoSpeechRecognitionModule.start({
-            lang: "en-US",
-            interimResults: true,
-            continuous: false,
+    });
+
+    const appendMessage = (newMessage: string, isDraft: boolean = false) => {
+        setMessages((prevMessages) => {
+            const updatedMessages = [...prevMessages];
+            const lastMessageIndex = updatedMessages.length - 1;
+    
+            if (!newMessage.trim()) return prevMessages;
+
+            if (isDraft) {
+                // Always update the last message if it's a user message (draft or not)
+                if (updatedMessages[lastMessageIndex]?.role === "user") {
+                    return updatedMessages.map((msg, i) => 
+                        i === lastMessageIndex 
+                            ? { ...msg, content: newMessage, isDraft: true }
+                            : msg
+                    );
+                }
+    
+                // Add a new draft message if none exists
+                return [
+                    ...updatedMessages,
+                    { role: "user", content: newMessage, isDraft: true },
+                ];
+            }
+    
+            // Finalize existing draft
+            if (updatedMessages[lastMessageIndex]?.isDraft) {
+                return updatedMessages.map((msg, i) => 
+                    i === lastMessageIndex 
+                        ? { ...msg, content: newMessage, isDraft: false }
+                        : msg
+                );
+            }
+
+            // Only add new message if we have content and no draft exists
+            return newMessage.trim() 
+                ? [...updatedMessages, { role: "user", content: newMessage, isDraft: false }]
+                : prevMessages;
         });
     };
 
-  return (
-    <LinearGradient
-        colors={['#250152','#000000']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={ styles.container }
-    >
-      <StatusBar barStyle="light-content" />
+    const handleStart = async () => {
+        await startRecognition();
+    };
 
-      <View style={styles.mainContainer}>
-        <View style={styles.header}>
-            <Image source={require('../assets/images/sam.png')} style={styles.headerImage} />
-        </View>
+    // const getCompletion = async (text: string) => {
+    //     if (messages.length === 0) {
+    //       addChat(db, text).then((res) => {
+    //         const chatID = res.lastInsertRowId;
+    //         setChatId(chatID.toString());
+    //         addMessage(db, chatID, { content: text, role: Role.User });
+    //       });
+    //     }
+    
+    //     setMessages([...messages, { role: Role.User, content: text }, { role: Role.Bot, content: '' }]);
+    //     messages.push();
+    //     openAI.chat.stream({
+    //       messages: [
+    //         {
+    //           role: 'user',
+    //           content: text,
+    //         },
+    //       ],
+    //       model: gptVersion == '4' ? 'gpt-4' : 'gpt-3.5-turbo',
+    //     });
+    // };
+    
 
-        <View style={styles.messagesContainer}>
-            <Text style={styles.title}>SAM</Text>
-            <View style={styles.chatBox}>
-                <ScrollView
-                    bounces={false}
-                    style={styles.scrollView}
-                    showsVerticalScrollIndicator={false}
-                >
-                    {messages.map((message, index:number) => {
-                    if (message.role == 'assistant') {
-                        return (
-                        <View key={index} style={styles.assistantMessageContainer}>
-                            <View style={styles.assistantMessage}>
-                            <Text style={styles.assistantMessageText}>
-                                {message.content}
-                            </Text>
-                            </View>
-                        </View>
-                        )
-                    } else {
-                        return (
-                        <View key={index} style={styles.userMessageContainer}>
-                            <View style={styles.userMessage}>
-                            <Text style={styles.userMessageText}>
-                                {message.content}
-                            </Text>
-                            </View>
-                        </View>
-                        )
-                    }
-                    })}
-                </ScrollView>
+    return (
+        <LinearGradient
+            colors={['#250152','#000000']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={ styles.container }
+        >
+            <StatusBar barStyle="light-content" />
+        
+            <View style={styles.mainContainer}>
+                <View style={styles.header}>
+                    <Image source={require('../assets/images/sam.png')} style={styles.headerImage} />
+                </View>
+        
+                <View style={styles.messagesContainer}>
+                    <Text style={styles.title}>SAM</Text>
+                    <View style={styles.chatBox}>
+                        <ScrollView
+                            ref={scrollViewRef}
+                            bounces={false}
+                            style={styles.scrollView}
+                            showsVerticalScrollIndicator={false}
+                        >
+                            {messages.map((message, index:number) => {
+                            if (message.role == 'assistant') {
+                                return (
+                                <View key={index} style={styles.assistantMessageContainer}>
+                                    <View style={styles.assistantMessage}>
+                                    <Text style={styles.assistantMessageText}>
+                                        {message.content}
+                                    </Text>
+                                    </View>
+                                </View>
+                                )
+                            } else {
+                                return (
+                                <View key={index} style={styles.userMessageContainer}>
+                                    <View style={styles.userMessage}>
+                                    <Text style={styles.userMessageText}>
+                                        {message.content}
+                                    </Text>
+                                    </View>
+                                </View>
+                                )
+                            }
+                            })}
+                        </ScrollView>
+                    </View>
+                </View>
+                        
+                
+                
             </View>
-        </View>
-
-        <View style={styles.footer}>
-            { !recognizing ? (
-                <TouchableOpacity onPress={handleStart}>
-                    <Image 
-                        style={[
-                            styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
-                        ]}
-                        source={require('../assets/images/microphone.png')}
-                    />
-                </TouchableOpacity>
-            ) : (
-                <TouchableOpacity onPress={() => ExpoSpeechRecognitionModule.stop()}>
-                    <Image 
-                        style={[
-                            styles.microphone, {backgroundColor: '#06B6D4'}
-                        ]}
-                        source={require('../assets/images/microphone.png')}
-                    />
-                </TouchableOpacity>
-            )}
-        </View>
-      </View>
-    </LinearGradient>
-  )
+            <View style={styles.footer}>
+                { keyboardEnabled && !recognizing ? (
+                    <KeyboardAvoidingView
+                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                        keyboardVerticalOffset={70}
+                        style={{
+                        position: 'absolute',
+                        bottom: 0,
+                        left: 0,
+                        width: '100%',
+                        }}>
+                        <MessageInput 
+                            onMicPress={handleStart}
+                            onKeyboardHide={() => setKeyboardEnabled(false)}
+                        />
+                    </KeyboardAvoidingView>
+                ) : (
+                    <>
+                        <TouchableOpacity onPress={() => setKeyboardEnabled(true)}>
+                            <Image 
+                                style={[
+                                    styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                                ]}
+                                source={require('../assets/images/keyboard.png')}
+                            />
+                        </TouchableOpacity>
+                        { !recognizing ? (
+                            <TouchableOpacity onPress={handleStart}>
+                                <Image 
+                                    style={[
+                                        styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                                    ]}
+                                    source={require('../assets/images/microphone.png')}
+                                />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity onPress={stopRecognition}>
+                                <Image 
+                                    style={[
+                                        styles.microphone, {backgroundColor: '#06B6D4'}
+                                    ]}
+                                    source={require('../assets/images/microphone.png')}
+                                />
+                            </TouchableOpacity>
+                        )}
+                    </>  
+                )}
+                
+                {/* <MessageInput onShouldSend={getCompletion} /> */}
+            </View>
+            
+        </LinearGradient>
+    )
 }
 
 const styles = StyleSheet.create({
@@ -129,12 +218,7 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'column',
         marginTop: scale(30),
-        marginBottom: scale(20),
         marginHorizontal: scale(20),
-        // justifyContent: 'center',
-        // alignItems: 'center',
-        // width: '100%',
-        // paddingHorizontal: scale(10),
     },
     header: {
         flexDirection: 'row',
@@ -196,12 +280,14 @@ const styles = StyleSheet.create({
         textAlign: 'right',
     },
     footer: {
-        justifyContent: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
     },
     microphone: {
         borderRadius: scale(8),
         marginTop: scale(-5),
+        marginHorizontal: scale(20),
         width: scale(70),
         height: scale(70),
     },
