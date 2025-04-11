@@ -2,8 +2,8 @@ import { StyleSheet, Text, View, StatusBar, Image, ScrollView, NativeSyntheticEv
 import React, { useRef, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { scale, verticalScale } from 'react-native-size-matters'
-import { onBoardingData } from '@/configs/constants'
-import type { onBoardingDataType, TextSegment } from '@/configs/global.d'
+import { onBoardingData } from '@/constants/OnboardingPages'
+import type { onBoardingDataType, TextSegment } from '@/constants/OnboardingPages'
 import AntDesign from '@expo/vector-icons/AntDesign'
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router'

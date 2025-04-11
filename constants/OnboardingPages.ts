@@ -1,5 +1,18 @@
 import { scale } from "react-native-size-matters";
-import type { onBoardingDataType } from './global.d';
+import { TextStyle } from 'react-native';
+
+export interface TextSegment {
+    text: string;
+    style?: TextStyle;
+}
+
+export interface onBoardingDataType {
+    id: number;
+    title: string | TextSegment[];
+    titleStyle: TextStyle;
+    description: string;
+    image: any;
+}
 
 export const onBoardingData:onBoardingDataType[] = [
     {

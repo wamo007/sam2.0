@@ -1,28 +1,61 @@
 import { Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React, { useEffect, useRef, useState } from 'react'
-import { dummyMessages } from '../constants';
-import MessageInput from '../components/MessageInput';
 import { LinearGradient } from 'expo-linear-gradient'
 import { scale } from 'react-native-size-matters'
-import { useSpeechRecognition } from '../components/SpeechRecognition';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import MessageInput from '../components/MessageInput';
+import { Message, Role } from '@/configs/dbTypes';
+import { addMessage, getMessages } from '@/configs/Database';
+import { useSQLiteContext } from 'expo-sqlite';
+import * as Sharing from 'expo-sharing'
+import * as FileSystem from 'expo-file-system'
 
 export default function HomeScreen() {
     const [keyboardEnabled, setKeyboardEnabled] = useState(false);
-    const [messages, setMessages] = useState(dummyMessages);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const scrollViewRef = useRef<ScrollView>(null);
+
+    const db = useSQLiteContext()
 
     useEffect(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
     }, [messages]);
 
+    useEffect(() => {
+        const fetchMessages = async () => {
+            try {
+                setIsLoading(true);
+                const dbMessages = await getMessages(db);
+                if (dbMessages) {
+                    setMessages(dbMessages);
+                }
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchMessages();
+    }, [db]);
+
     const { recognizing, startRecognition, stopRecognition } = useSpeechRecognition({
         onStart: () => {},
-        onEnd: (finalTranscript) => {
-            appendMessage(finalTranscript, false);
-            // Remove any empty draft messages
-            setMessages(prev => prev.filter(msg => 
-                !(msg.role === "user" && msg.isDraft && !msg.content.trim())
-            ));
+        onEnd: async (finalTranscript) => {
+            if (finalTranscript.trim()) {
+                // await chatDB.addMessage({
+                //     role: 'user',
+                //     content: finalTranscript,
+                //     timestamp: Date.now(),
+                //     isDraft: false
+                // });
+                await appendMessage(finalTranscript, false);
+                // Remove any empty draft messages
+                setMessages(prev => prev.filter(msg => 
+                    !(msg.role === Role.User && msg.isDraft && !msg.content.trim())
+                ));
+            }
         },
         onTranscriptUpdate: (transcript, isDraft) => {
             appendMessage(transcript, isDraft);
@@ -32,7 +65,7 @@ export default function HomeScreen() {
         }
     });
 
-    const appendMessage = (newMessage: string, isDraft: boolean = false) => {
+    const appendMessage = async (newMessage: string, isDraft: boolean = false) => {
         setMessages((prevMessages) => {
             const updatedMessages = [...prevMessages];
             const lastMessageIndex = updatedMessages.length - 1;
@@ -40,8 +73,9 @@ export default function HomeScreen() {
             if (!newMessage.trim()) return prevMessages;
 
             if (isDraft) {
-                // Always update the last message if it's a user message (draft or not)
-                if (updatedMessages[lastMessageIndex]?.role === "user") {
+                // Always update the last message if it's a user message (if draft)
+                if (updatedMessages[lastMessageIndex]?.role === Role.User 
+                    && updatedMessages[lastMessageIndex]?.isDraft) {
                     return updatedMessages.map((msg, i) => 
                         i === lastMessageIndex 
                             ? { ...msg, content: newMessage, isDraft: true }
@@ -52,7 +86,12 @@ export default function HomeScreen() {
                 // Add a new draft message if none exists
                 return [
                     ...updatedMessages,
-                    { role: "user", content: newMessage, isDraft: true },
+                    {
+                        role: Role.User,
+                        content: newMessage,
+                        isDraft: true,
+                        timestamp: Date.now(),
+                    },
                 ];
             }
     
@@ -67,10 +106,37 @@ export default function HomeScreen() {
 
             // Only add new message if we have content and no draft exists
             return newMessage.trim() 
-                ? [...updatedMessages, { role: "user", content: newMessage, isDraft: false }]
+                ? [
+                    ...updatedMessages, 
+                    { 
+                        role: Role.User,
+                        content: newMessage,
+                        isDraft: false,
+                        timestamp: Date.now(),
+                    },
+                ]
                 : prevMessages;
         });
+
+        if (!isDraft) {
+            await addMessage(db, {
+                role: Role.User,
+                content: newMessage,
+                timestamp: Date.now(),
+                isDraft: false,
+            });
+        }
     };
+
+    const appendTextMessage = async (text: string) => {
+        setMessages([...messages, { role: Role.User, content: text, timestamp: Date.now(), isDraft: false }]);
+        await addMessage(db, { role: Role.User, content: text, timestamp: Date.now(), isDraft: false })
+    }
+
+    
+    const exportDB = async () => {
+        await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
+    }
 
     const handleStart = async () => {
         await startRecognition();
@@ -97,7 +163,6 @@ export default function HomeScreen() {
     //       model: gptVersion == '4' ? 'gpt-4' : 'gpt-3.5-turbo',
     //     });
     // };
-    
 
     return (
         <LinearGradient
@@ -114,6 +179,14 @@ export default function HomeScreen() {
                 </View>
         
                 <View style={styles.messagesContainer}>
+                    {/* <TouchableOpacity onPress={exportDB}>
+                        <Image 
+                            style={[
+                                styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                            ]}
+                            source={require('../assets/images/keyboard.png')}
+                        />
+                    </TouchableOpacity> */}
                     <Text style={styles.title}>SAM</Text>
                     <View style={styles.chatBox}>
                         <ScrollView
@@ -122,34 +195,37 @@ export default function HomeScreen() {
                             style={styles.scrollView}
                             showsVerticalScrollIndicator={false}
                         >
-                            {messages.map((message, index:number) => {
-                            if (message.role == 'assistant') {
-                                return (
-                                <View key={index} style={styles.assistantMessageContainer}>
-                                    <View style={styles.assistantMessage}>
-                                    <Text style={styles.assistantMessageText}>
-                                        {message.content}
-                                    </Text>
-                                    </View>
+                            { isLoading ? (
+                                <View style={styles.loadingContainer}>
+                                    <Text style={styles.loadingText}>Loading messages...</Text>
                                 </View>
-                                )
-                            } else {
-                                return (
-                                <View key={index} style={styles.userMessageContainer}>
-                                    <View style={styles.userMessage}>
-                                    <Text style={styles.userMessageText}>
-                                        {message.content}
-                                    </Text>
-                                    </View>
-                                </View>
-                                )
+                            ) : messages.map((message, index:number) => {
+                                    if (message.role === Role.Assistant) {
+                                        return (
+                                        <View key={index} style={styles.assistantMessageContainer}>
+                                            <View style={styles.assistantMessage}>
+                                            <Text style={styles.assistantMessageText}>
+                                                {message.content}
+                                            </Text>
+                                            </View>
+                                        </View>
+                                        )
+                                    } else {
+                                        return (
+                                        <View key={index} style={styles.userMessageContainer}>
+                                            <View style={styles.userMessage}>
+                                            <Text style={styles.userMessageText}>
+                                                {message.content}
+                                            </Text>
+                                            </View>
+                                        </View>
+                                        )
+                                    }
+                                })
                             }
-                            })}
                         </ScrollView>
                     </View>
                 </View>
-                        
-                
                 
             </View>
             <View style={styles.footer}>
@@ -166,6 +242,7 @@ export default function HomeScreen() {
                         <MessageInput 
                             onMicPress={handleStart}
                             onKeyboardHide={() => setKeyboardEnabled(false)}
+                            onShouldSend={appendTextMessage}
                         />
                     </KeyboardAvoidingView>
                 ) : (
@@ -283,12 +360,22 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: scale(20),
     },
     microphone: {
         borderRadius: scale(8),
         marginTop: scale(-5),
         marginHorizontal: scale(20),
-        width: scale(70),
-        height: scale(70),
+        width: scale(60),
+        height: scale(60),
     },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    loadingText: {
+        color: '#F9FAFB',
+        fontSize: scale(14),
+    }
 });

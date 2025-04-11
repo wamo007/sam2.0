@@ -7,6 +7,8 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { SQLiteProvider } from 'expo-sqlite';
+import { migrateDbIfNeeded } from '@/configs/Database';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -35,11 +37,18 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <SQLiteProvider 
+        databaseName='chatSAM.db'
+        onInit={async (db) => {
+          await migrateDbIfNeeded(db);
+        }}
+      >
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(routes)/onboarding/index" />
         <Stack.Screen name="(routes)/home/index" />
       </Stack>
+      </SQLiteProvider>
       <StatusBar style="auto" />
     </ThemeProvider>
   );

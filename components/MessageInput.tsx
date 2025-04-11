@@ -10,17 +10,18 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRef, useState } from 'react';
 import { BlurView } from 'expo-blur';
 
-export type Props = {
-  onShouldSend: (message: string) => void;
-};
+// export type Props = {
+//   onShouldSend: (message: string) => void;
+// };
 
 type MessageInputProps = {
     onMicPress: () => void;
     onKeyboardHide: () => void;
+    onShouldSend: (message: string) => void;
 };
 
 // const MessageInput = ({ onShouldSend }: Props) => {
-const MessageInput = ({ onMicPress, onKeyboardHide }: MessageInputProps) => {
+const MessageInput = ({ onMicPress, onKeyboardHide, onShouldSend }: MessageInputProps ) => {
   const [message, setMessage] = useState('');
   const { bottom } = useSafeAreaInsets();
   const expanded = useSharedValue(0);
@@ -36,7 +37,7 @@ const MessageInput = ({ onMicPress, onKeyboardHide }: MessageInputProps) => {
   };
 
   const onSend = () => {
-    // onShouldSend(message);
+    onShouldSend(message);
     setMessage('');
   };
 

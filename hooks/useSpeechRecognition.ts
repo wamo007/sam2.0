@@ -32,14 +32,14 @@ export const useSpeechRecognition = (props: SpeechRecognitionProps) => {
             parseInt(Device.osVersion.split(".")[0]) >= 13;
 
         // Start speech recognition
-        await ExpoSpeechRecognitionModule.start({
+        ExpoSpeechRecognitionModule.start({
             lang: "en-US",
             interimResults: true,
             continuous: false,
-            requiresOnDeviceRecognition: true,
+            requiresOnDeviceRecognition: false,
             addsPunctuation: isAndroid13OrHigher,
             androidIntentOptions: {
-                // EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 5000,
+                EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 4000,
                 EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 3000,
                 EXTRA_MASK_OFFENSIVE_WORDS: false,
             },            
