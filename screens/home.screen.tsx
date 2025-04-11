@@ -1,5 +1,6 @@
-import { Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React, { useEffect, useRef, useState } from 'react'
+import { useLLMProcessor } from '@/configs/LLMconfig';
 import { LinearGradient } from 'expo-linear-gradient'
 import { scale } from 'react-native-size-matters'
 import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
@@ -15,8 +16,29 @@ export default function HomeScreen() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const scrollViewRef = useRef<ScrollView>(null);
+    
+    const {
+        processQuery,
+        loadModel,
+        conversation,
+        setConversation,
+        isLoading: isProcessing,
+        setIsLoading: setIsProcessing,
+        isModelReady,
+        isDownloading,
+        progress
+    } = useLLMProcessor();
 
     const db = useSQLiteContext()
+    const llmFile = 'Llama-3.2-1B-Instruct-Q4_0.gguf'
+    // const llmFileUrl = 'https://huggingface.co/medmekk/Llama-3.2-1B-Instruct.GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_0.gguf'
+
+    useEffect(() => {
+        const checkModel = async () => {
+          await loadModel(llmFile);
+        };
+        checkModel();
+    }, []);  
 
     useEffect(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -66,56 +88,41 @@ export default function HomeScreen() {
     });
 
     const appendMessage = async (newMessage: string, isDraft: boolean = false) => {
-        setMessages((prevMessages) => {
-            const updatedMessages = [...prevMessages];
-            const lastMessageIndex = updatedMessages.length - 1;
-    
-            if (!newMessage.trim()) return prevMessages;
+        if (!newMessage.trim()) return;
+
+        // Handle user message
+        setMessages(prev => {
+            const updated = [...prev];
+            const lastIdx = updated.length - 1;
 
             if (isDraft) {
-                // Always update the last message if it's a user message (if draft)
-                if (updatedMessages[lastMessageIndex]?.role === Role.User 
-                    && updatedMessages[lastMessageIndex]?.isDraft) {
-                    return updatedMessages.map((msg, i) => 
-                        i === lastMessageIndex 
-                            ? { ...msg, content: newMessage, isDraft: true }
-                            : msg
+                if (updated[lastIdx]?.role === Role.User && updated[lastIdx]?.isDraft) {
+                    return updated.map((msg, i) => 
+                        i === lastIdx ? { ...msg, content: newMessage } : msg
                     );
                 }
-    
-                // Add a new draft message if none exists
-                return [
-                    ...updatedMessages,
-                    {
-                        role: Role.User,
-                        content: newMessage,
-                        isDraft: true,
-                        timestamp: Date.now(),
-                    },
-                ];
-            }
-    
-            // Finalize existing draft
-            if (updatedMessages[lastMessageIndex]?.isDraft) {
-                return updatedMessages.map((msg, i) => 
-                    i === lastMessageIndex 
-                        ? { ...msg, content: newMessage, isDraft: false }
-                        : msg
-                );
+                return [...updated, {
+                    role: Role.User,
+                    content: newMessage,
+                    isDraft: true,
+                    timestamp: Date.now()
+                }];
             }
 
-            // Only add new message if we have content and no draft exists
-            return newMessage.trim() 
-                ? [
-                    ...updatedMessages, 
-                    { 
-                        role: Role.User,
-                        content: newMessage,
-                        isDraft: false,
-                        timestamp: Date.now(),
-                    },
-                ]
-                : prevMessages;
+            // Final message - remove draft and add finalized version
+            const finalMessages = updated.filter(msg => 
+                !(msg.role === Role.User && msg.isDraft)
+            );
+            
+            return [
+                ...finalMessages,
+                {
+                    role: Role.User,
+                    content: newMessage,
+                    isDraft: false,
+                    timestamp: Date.now()
+                }
+            ];
         });
 
         if (!isDraft) {
@@ -125,12 +132,55 @@ export default function HomeScreen() {
                 timestamp: Date.now(),
                 isDraft: false,
             });
+
+            // Get assistant response
+            if (!isModelReady) {
+                Alert.alert(
+                  "Model Not Ready",
+                  "The AI model is still loading. Please wait or check your internet connection if downloading.",
+                  [
+                    {
+                      text: "Retry",
+                      onPress: async () => {
+                        await loadModel(llmFile);
+                        appendMessage(newMessage, false);
+                      }
+                    }
+                  ]
+                );
+                return;
+            }
+          
+            // Get assistant response
+            setIsProcessing(true);
+
+            try {
+                const response = await processQuery(newMessage);
+                setMessages(prev => [
+                    ...prev,
+                    {
+                        role: Role.Assistant,
+                        content: response,
+                        timestamp: Date.now(),
+                        isDraft: false
+                    }
+                ]);
+                await addMessage(db, {
+                    role: Role.Assistant,
+                    content: response,
+                    timestamp: Date.now(),
+                    isDraft: false
+                });
+            } catch (error) {
+                console.error("Error processing query:", error);
+            } finally {
+                setIsProcessing(false);
+            }
         }
     };
 
     const appendTextMessage = async (text: string) => {
-        setMessages([...messages, { role: Role.User, content: text, timestamp: Date.now(), isDraft: false }]);
-        await addMessage(db, { role: Role.User, content: text, timestamp: Date.now(), isDraft: false })
+        await appendMessage(text, false);
     }
 
     
@@ -187,6 +237,13 @@ export default function HomeScreen() {
                             source={require('../assets/images/keyboard.png')}
                         />
                     </TouchableOpacity> */}
+                    {isDownloading && (
+                        <View style={styles.downloadContainer}>
+                            <Text style={styles.downloadText}>
+                            Downloading model... {progress}%
+                            </Text>
+                        </View>
+                    )}
                     <Text style={styles.title}>SAM</Text>
                     <View style={styles.chatBox}>
                         <ScrollView
@@ -377,5 +434,17 @@ const styles = StyleSheet.create({
     loadingText: {
         color: '#F9FAFB',
         fontSize: scale(14),
-    }
+    },
+    downloadContainer: {
+        position: 'absolute',
+        bottom: scale(80),
+        alignSelf: 'center',
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        padding: scale(10),
+        borderRadius: scale(5),
+    },
+    downloadText: {
+        color: 'white',
+        fontSize: scale(12),
+    },
 });

@@ -24,6 +24,16 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
             content TEXT NOT NULL,
             isDraft INTEGER NOT NULL DEFAULT 0
         );
+
+        CREATE TABLE memories (
+            id INTEGER PRIMARY KEY NOT NULL,
+            content TEXT NOT NULL,
+            embedding TEXT NOT NULL,
+            importance REAL NOT NULL DEFAULT 0.5,
+            timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
+        );
+
+        CREATE INDEX idx_memories_timestamp ON memories(timestamp);
     `);
 
     currentDbVersion = 1;
