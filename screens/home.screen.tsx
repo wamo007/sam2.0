@@ -1,16 +1,16 @@
 import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React, { useEffect, useRef, useState } from 'react'
-import { useLLMProcessor } from '@/hooks/useLLMProcessor';
 import { LinearGradient } from 'expo-linear-gradient'
 import { scale } from 'react-native-size-matters'
-import { useSpeechRecognition, useSpeechOutput } from '../hooks/useVoiceInOut';
+import { useKeepAwake } from 'expo-keep-awake'
 import MessageInput from '../components/MessageInput';
-import { Message } from '@/configs/dbTypes';
+import { useLLMProcessor } from '@/hooks/useLLMProcessor';
+import { useSpeechRecognition, useSpeechOutput } from '../hooks/useVoiceInOut';
 import { addMessage, getAllMessages } from '@/configs/Database';
+import { Message } from '@/configs/dbTypes';
 import { useSQLiteContext } from 'expo-sqlite';
 import * as Sharing from 'expo-sharing'
 import * as FileSystem from 'expo-file-system'
-import * as Speech from 'expo-speech';
 
 export default function HomeScreen() {
 
@@ -240,7 +240,13 @@ export default function HomeScreen() {
                     .replace(/<think>.*?<\/think>/gs, "")
                     .trim();
                   if (talkingMode) {
-                      await useSpeechOutput(finalContent);
+                    try {
+                        await useSpeechOutput(finalContent);
+                    } catch (error) {
+                        console.error("Error in speech sequence:", error);
+                        // Optionally disable talking mode if there's an error
+                        setTalkingMode(false);
+                    }
                   }
                   setMessages((prev) => {
                     const lastIndex = prev.length - 1;
@@ -264,6 +270,10 @@ export default function HomeScreen() {
 
                 } finally {
                   setIsGenerating(false);
+                  if (talkingMode) {
+                    setTalkingMode(false);
+                    await handleStart();
+                  }
                 }
             } catch (error) {
                 console.error("Error processing query:", error);
@@ -281,8 +291,10 @@ export default function HomeScreen() {
 
     const handleStart = async () => {
         await startRecognition();
+        setTalkingMode(true);
     };
 
+    useKeepAwake();
     return (
         <LinearGradient
             colors={['#250152','#000000']}
@@ -293,7 +305,6 @@ export default function HomeScreen() {
             <StatusBar barStyle="light-content" />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                // keyboardVerticalOffset={70}
                 style={{
                     flex: 1,
                 }}
@@ -376,7 +387,6 @@ export default function HomeScreen() {
                 ) : (
                     <View style={styles.footer}>
                         <TouchableOpacity onPress={() => setKeyboardEnabled(true)}>
-                        {/* <TouchableOpacity onPress={() => useSpeechOutput('testing voice initiation')}> */}
                             <Image 
                                 style={[
                                     styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
@@ -384,6 +394,34 @@ export default function HomeScreen() {
                                 source={require('../assets/images/keyboard.png')}
                             />
                         </TouchableOpacity>
+                        <TouchableOpacity>
+                            <Image 
+                                style={[
+                                    styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                                ]}
+                                source={require('../assets/images/sam.png')}
+                            />
+                        </TouchableOpacity>
+                        { !talkingMode ? (
+                            <TouchableOpacity onPress={() => setTalkingMode(true)}>
+                                <Image 
+                                    style={[
+                                        styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                                    ]}
+                                    source={require('../assets/images/speaker.png')}
+                                />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity onPress={() => setTalkingMode(false)}>
+                                <Image 
+                                    style={[
+                                        styles.microphone, {backgroundColor: '#06B6D4'}
+                                    ]}
+                                    source={require('../assets/images/speaker.png')}
+                                />
+                            </TouchableOpacity>
+                        )}
+                        
                         { !recognizing ? (
                             <TouchableOpacity 
                                 onPress={handleStart}
