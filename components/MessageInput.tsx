@@ -8,7 +8,7 @@ import {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRef, useState } from 'react';
-import { BlurView } from 'expo-blur';
+import { scale } from 'react-native-size-matters'
 
 // export type Props = {
 //   onShouldSend: (message: string) => void;
@@ -42,7 +42,7 @@ const MessageInput = ({ onMicPress, onKeyboardHide, onShouldSend }: MessageInput
   };
 
   return (
-    <BlurView intensity={80} tint='systemChromeMaterialDark' style={{ paddingBottom: bottom, paddingTop: 5 }}>
+    <View style={{ paddingBottom: bottom }}>
       <View style={styles.row}>
 
         <TextInput
@@ -56,11 +56,11 @@ const MessageInput = ({ onMicPress, onKeyboardHide, onShouldSend }: MessageInput
           value={message}
           multiline
         />
-        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: scale(12) }}>
             <AntDesign 
                 onPress={onSend} 
                 name="arrowup" 
-                size={24} 
+                size={scale(22)} 
                 color={'rgb(5, 153, 179)'} 
             />
             <FontAwesome6 
@@ -69,13 +69,13 @@ const MessageInput = ({ onMicPress, onKeyboardHide, onShouldSend }: MessageInput
                     onKeyboardHide();
                 }} 
                 name="microphone-lines" 
-                size={24} 
+                size={scale(21)} 
                 color="rgb(5, 153, 179)" 
             />
         </TouchableOpacity>
 
       </View>
-    </BlurView>
+    </View>
   );
 };
 
@@ -83,13 +83,14 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    marginTop: scale(10),
+    marginBottom: scale(5),
   },
   messageInput: {
     flex: 1,
-    marginHorizontal: 10,
-    borderRadius: 8,
-    padding: 10,
+    marginRight: scale(12),
+    borderRadius: scale(8),
+    padding: scale(10),
     color: '#fff',
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
   },

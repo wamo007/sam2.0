@@ -1,11 +1,5 @@
-export enum Role {
-    User = 0,
-    Assistant = 1,
-}
-
-export interface Message {
-  role: Role;
-  timestamp: number;
+export type Message = {
+  role: "system" | "assistant" | "user";
   content: string;
-  isDraft: boolean;
+  isDraft?: boolean;
 }  

@@ -1,44 +1,72 @@
 import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React, { useEffect, useRef, useState } from 'react'
-import { useLLMProcessor } from '@/configs/LLMconfig';
+import { useLLMProcessor } from '@/hooks/useLLMProcessor';
 import { LinearGradient } from 'expo-linear-gradient'
 import { scale } from 'react-native-size-matters'
-import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
+import { useSpeechRecognition, useSpeechOutput } from '../hooks/useVoiceInOut';
 import MessageInput from '../components/MessageInput';
-import { Message, Role } from '@/configs/dbTypes';
-import { addMessage, getMessages } from '@/configs/Database';
+import { Message } from '@/configs/dbTypes';
+import { addMessage, getAllMessages } from '@/configs/Database';
 import { useSQLiteContext } from 'expo-sqlite';
 import * as Sharing from 'expo-sharing'
 import * as FileSystem from 'expo-file-system'
+import * as Speech from 'expo-speech';
 
 export default function HomeScreen() {
+
     const [keyboardEnabled, setKeyboardEnabled] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isGenerating, setIsGenerating] = useState<boolean>(false);
+    const [showReadyMessage, setShowReadyMessage] = useState<boolean>(false);
+    const [talkingMode, setTalkingMode] = useState<boolean>(true);
     const scrollViewRef = useRef<ScrollView>(null);
     
     const {
-        processQuery,
+        handleDownloadModel,
+        checkFileExists,
         loadModel,
-        conversation,
-        setConversation,
-        isLoading: isProcessing,
-        setIsLoading: setIsProcessing,
-        isModelReady,
+        context,
         isDownloading,
+        isModelReady,
         progress
     } = useLLMProcessor();
 
     const db = useSQLiteContext()
-    const llmFile = 'Llama-3.2-1B-Instruct-Q4_0.gguf'
-    // const llmFileUrl = 'https://huggingface.co/medmekk/Llama-3.2-1B-Instruct.GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_0.gguf'
+    const modelName = 'Llama-3.2-1B-Instruct-Q4_0.gguf'
+    const destPath = `${FileSystem.documentDirectory}${modelName}`
 
     useEffect(() => {
         const checkModel = async () => {
-          await loadModel(llmFile);
+            if (!(await checkFileExists(destPath))) {
+                Alert.alert(
+                    "Confirm Model Download",
+                    `I need to download my AI model to function properly.`,
+                    [
+                      { text: "OK", onPress: async () => {
+                            await handleDownloadModel(modelName) 
+                        }
+                      }
+                    ],
+                    { cancelable: false }
+                );
+            } else {
+                await loadModel(modelName);
+            }
         };
         checkModel();
     }, []);  
+
+    useEffect(() => {
+        if (!isDownloading && isModelReady) {
+            setShowReadyMessage(true);
+            const timer = setTimeout(() => {
+                setShowReadyMessage(false);
+            }, 2000);
+    
+            return () => clearTimeout(timer);
+        }
+    }, [isDownloading, isModelReady]);
 
     useEffect(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -48,7 +76,7 @@ export default function HomeScreen() {
         const fetchMessages = async () => {
             try {
                 setIsLoading(true);
-                const dbMessages = await getMessages(db);
+                const dbMessages = await getAllMessages(db);
                 if (dbMessages) {
                     setMessages(dbMessages);
                 }
@@ -66,16 +94,9 @@ export default function HomeScreen() {
         onStart: () => {},
         onEnd: async (finalTranscript) => {
             if (finalTranscript.trim()) {
-                // await chatDB.addMessage({
-                //     role: 'user',
-                //     content: finalTranscript,
-                //     timestamp: Date.now(),
-                //     isDraft: false
-                // });
                 await appendMessage(finalTranscript, false);
-                // Remove any empty draft messages
                 setMessages(prev => prev.filter(msg => 
-                    !(msg.role === Role.User && msg.isDraft && !msg.content.trim())
+                    !(msg.role === 'user' && msg.isDraft && !msg.content.trim())
                 ));
             }
         },
@@ -96,85 +117,156 @@ export default function HomeScreen() {
             const lastIdx = updated.length - 1;
 
             if (isDraft) {
-                if (updated[lastIdx]?.role === Role.User && updated[lastIdx]?.isDraft) {
+                if (updated[lastIdx]?.role === 'user' && updated[lastIdx]?.isDraft) {
                     return updated.map((msg, i) => 
                         i === lastIdx ? { ...msg, content: newMessage } : msg
                     );
                 }
                 return [...updated, {
-                    role: Role.User,
+                    role: 'user',
                     content: newMessage,
                     isDraft: true,
-                    timestamp: Date.now()
                 }];
             }
 
             // Final message - remove draft and add finalized version
             const finalMessages = updated.filter(msg => 
-                !(msg.role === Role.User && msg.isDraft)
+                !(msg.role === 'user' && msg.isDraft)
             );
             
             return [
                 ...finalMessages,
                 {
-                    role: Role.User,
+                    role: 'user',
                     content: newMessage,
                     isDraft: false,
-                    timestamp: Date.now()
                 }
             ];
         });
 
         if (!isDraft) {
             await addMessage(db, {
-                role: Role.User,
+                role: 'user',
                 content: newMessage,
-                timestamp: Date.now(),
                 isDraft: false,
             });
 
-            // Get assistant response
-            if (!isModelReady) {
-                Alert.alert(
-                  "Model Not Ready",
-                  "The AI model is still loading. Please wait or check your internet connection if downloading.",
-                  [
-                    {
-                      text: "Retry",
-                      onPress: async () => {
-                        await loadModel(llmFile);
-                        appendMessage(newMessage, false);
-                      }
-                    }
-                  ]
-                );
-                return;
-            }
-          
-            // Get assistant response
-            setIsProcessing(true);
+            setMessages(prev => prev.filter(msg => 
+                !(msg.role === 'user' && msg.isDraft)
+            ));
 
             try {
-                const response = await processQuery(newMessage);
-                setMessages(prev => [
+                if (!context) {
+                    Alert.alert("Model Not Loaded", "Please load the model first.");
+                    return;
+                }
+
+                if (!newMessage.trim()) {
+                    Alert.alert("Input Error", "Please enter a message.");
+                    return;
+                }
+                
+                const newConversation: Message[] = [
+                    ...messages,
+                    { role: "user", content: newMessage, isDraft: false },
+                ];
+                setIsGenerating(true);
+                
+                try {
+                  const stopWords = [
+                    "</s>",
+                    "<|end|>",
+                    "user:",
+                    "assistant:",
+                    "<|im_end|>",
+                    "<|eot_id|>",
+                    "<|end▁of▁sentence|>",
+                    "<|end_of_text|>",
+                    "<｜end▁of▁sentence｜>",
+                  ];
+
+                  // Create chat array with current messages plus the new user message
+                  const chat = newConversation;
+            
+                  // Append a placeholder for the assistant's response
+                  setMessages((prev) => [
                     ...prev,
                     {
-                        role: Role.Assistant,
-                        content: response,
-                        timestamp: Date.now(),
-                        isDraft: false
+                      role: 'assistant',
+                      content: "",
+                      isDraft: true,
+                    },
+                  ]);
+                  let currentAssistantMessage = "";
+            
+                  interface CompletionData {
+                    token: string;
+                    // completed?: boolean;
+                  }
+            
+                  interface CompletionResult {
+                    timings: {
+                      predicted_per_second: number;
+                    };
+                  }
+            
+                  const result: CompletionResult = await context.completion(
+                    {
+                      messages: chat,
+                      n_predict: 10000,
+                      stop: stopWords,
+                    },
+                    async (data: CompletionData) => {
+                      const token = data.token;
+                      currentAssistantMessage += token;
+
+                      const visibleContent = currentAssistantMessage
+                          .replace(/<think>.*?<\/think>/gs, "")
+                          .trim()
+            
+                      setMessages((prev) => {
+                        const lastIndex = prev.length - 1;
+                        const updated = [...prev];
+                        updated[lastIndex].content = visibleContent;
+                        updated[lastIndex].isDraft = false; // Keep as draft until complete
+                        return updated;
+                      });
+
                     }
-                ]);
-                await addMessage(db, {
-                    role: Role.Assistant,
-                    content: response,
-                    timestamp: Date.now(),
+                  );
+
+                //   After completion is done, save final message
+                  const finalContent = currentAssistantMessage
+                    .replace(/<think>.*?<\/think>/gs, "")
+                    .trim();
+                  if (talkingMode) {
+                      await useSpeechOutput(finalContent);
+                  }
+                  setMessages((prev) => {
+                    const lastIndex = prev.length - 1;
+                    const updated = [...prev];
+                    updated[lastIndex].content = finalContent;
+                    updated[lastIndex].isDraft = false;
+                    return updated;
+                  });
+
+                  await addMessage(db, {
+                    role: 'assistant',
+                    content: finalContent,
                     isDraft: false
-                });
+                  });
+            
+                } catch (error) {
+
+                    const errorMessage =
+                      error instanceof Error ? error.message : "Unknown error";
+                    Alert.alert("Error During Inference", errorMessage);
+
+                } finally {
+                  setIsGenerating(false);
+                }
             } catch (error) {
                 console.error("Error processing query:", error);
-            } finally {
-                setIsProcessing(false);
             }
         }
     };
@@ -183,7 +275,6 @@ export default function HomeScreen() {
         await appendMessage(text, false);
     }
 
-    
     const exportDB = async () => {
         await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
     }
@@ -191,28 +282,6 @@ export default function HomeScreen() {
     const handleStart = async () => {
         await startRecognition();
     };
-
-    // const getCompletion = async (text: string) => {
-    //     if (messages.length === 0) {
-    //       addChat(db, text).then((res) => {
-    //         const chatID = res.lastInsertRowId;
-    //         setChatId(chatID.toString());
-    //         addMessage(db, chatID, { content: text, role: Role.User });
-    //       });
-    //     }
-    
-    //     setMessages([...messages, { role: Role.User, content: text }, { role: Role.Bot, content: '' }]);
-    //     messages.push();
-    //     openAI.chat.stream({
-    //       messages: [
-    //         {
-    //           role: 'user',
-    //           content: text,
-    //         },
-    //       ],
-    //       model: gptVersion == '4' ? 'gpt-4' : 'gpt-3.5-turbo',
-    //     });
-    // };
 
     return (
         <LinearGradient
@@ -222,89 +291,92 @@ export default function HomeScreen() {
             style={ styles.container }
         >
             <StatusBar barStyle="light-content" />
-        
-            <View style={styles.mainContainer}>
-                <View style={styles.header}>
-                    <Image source={require('../assets/images/sam.png')} style={styles.headerImage} />
-                </View>
-        
-                <View style={styles.messagesContainer}>
-                    {/* <TouchableOpacity onPress={exportDB}>
-                        <Image 
-                            style={[
-                                styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
-                            ]}
-                            source={require('../assets/images/keyboard.png')}
-                        />
-                    </TouchableOpacity> */}
-                    {isDownloading && (
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                // keyboardVerticalOffset={70}
+                style={{
+                    flex: 1,
+                }}
+            >
+                <View style={styles.mainContainer}>
+                    { isDownloading && (
                         <View style={styles.downloadContainer}>
                             <Text style={styles.downloadText}>
-                            Downloading model... {progress}%
+                                Downloading model... {progress}%
                             </Text>
                         </View>
                     )}
-                    <Text style={styles.title}>SAM</Text>
-                    <View style={styles.chatBox}>
-                        <ScrollView
-                            ref={scrollViewRef}
-                            bounces={false}
-                            style={styles.scrollView}
-                            showsVerticalScrollIndicator={false}
-                        >
-                            { isLoading ? (
-                                <View style={styles.loadingContainer}>
-                                    <Text style={styles.loadingText}>Loading messages...</Text>
-                                </View>
-                            ) : messages.map((message, index:number) => {
-                                    if (message.role === Role.Assistant) {
-                                        return (
-                                        <View key={index} style={styles.assistantMessageContainer}>
-                                            <View style={styles.assistantMessage}>
-                                            <Text style={styles.assistantMessageText}>
-                                                {message.content}
-                                            </Text>
-                                            </View>
-                                        </View>
-                                        )
-                                    } else {
-                                        return (
-                                        <View key={index} style={styles.userMessageContainer}>
-                                            <View style={styles.userMessage}>
-                                            <Text style={styles.userMessageText}>
-                                                {message.content}
-                                            </Text>
-                                            </View>
-                                        </View>
-                                        )
-                                    }
-                                })
-                            }
-                        </ScrollView>
+                    { !isDownloading && !isModelReady && (
+                        <View style={styles.downloadContainer}>
+                            <Text style={styles.downloadText}>
+                                Warming up gears...
+                            </Text>
+                        </View>
+                    )}
+                    { showReadyMessage && (
+                        <View style={styles.downloadContainer}>
+                            <Text style={styles.downloadText}>
+                                Ready to Talk!
+                            </Text>
+                        </View>
+                    )}
+                    <View style={styles.header}>
+                        <Image source={require('../assets/images/sam.png')} style={styles.headerImage} />
                     </View>
-                </View>
                 
-            </View>
-            <View style={styles.footer}>
+                    <View style={styles.messagesContainer}>
+                        <Text style={styles.title}>SAM</Text>
+                        <View style={styles.chatBox}>
+                            <ScrollView
+                                ref={scrollViewRef}
+                                bounces={false}
+                                style={styles.scrollView}
+                                showsVerticalScrollIndicator={false}
+                            >
+                                { isLoading ? (
+                                    <View style={styles.loadingContainer}>
+                                        <Text style={styles.loadingText}>Loading messages...</Text>
+                                    </View>
+                                ) : messages.map((message, index:number) => {
+                                        if (message.role === 'assistant') {
+                                            return (
+                                            <View key={index} style={styles.assistantMessageContainer}>
+                                                <View style={styles.assistantMessage}>
+                                                <Text style={styles.assistantMessageText}>
+                                                    {message.content}
+                                                </Text>
+                                                </View>
+                                            </View>
+                                            )
+                                        } else if (message.role === 'user') {
+                                            return (
+                                            <View key={index} style={styles.userMessageContainer}>
+                                                <View style={styles.userMessage}>
+                                                <Text style={styles.userMessageText}>
+                                                    {message.content}
+                                                </Text>
+                                                </View>
+                                            </View>
+                                            )
+                                        }
+                                    })
+                                }
+                            </ScrollView>
+                        </View>
+                    </View>
+                            
+                </View>
+                            
                 { keyboardEnabled && !recognizing ? (
-                    <KeyboardAvoidingView
-                        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                        keyboardVerticalOffset={70}
-                        style={{
-                        position: 'absolute',
-                        bottom: 0,
-                        left: 0,
-                        width: '100%',
-                        }}>
-                        <MessageInput 
-                            onMicPress={handleStart}
-                            onKeyboardHide={() => setKeyboardEnabled(false)}
-                            onShouldSend={appendTextMessage}
-                        />
-                    </KeyboardAvoidingView>
+                    <MessageInput 
+                        onMicPress={handleStart}
+                        onKeyboardHide={() => setKeyboardEnabled(false)}
+                        onShouldSend={appendTextMessage}
+                    />
                 ) : (
-                    <>
+                    <View style={styles.footer}>
                         <TouchableOpacity onPress={() => setKeyboardEnabled(true)}>
+                        {/* <TouchableOpacity onPress={() => useSpeechOutput('testing voice initiation')}> */}
                             <Image 
                                 style={[
                                     styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
@@ -313,7 +385,10 @@ export default function HomeScreen() {
                             />
                         </TouchableOpacity>
                         { !recognizing ? (
-                            <TouchableOpacity onPress={handleStart}>
+                            <TouchableOpacity 
+                                onPress={handleStart}
+                                disabled={isGenerating}
+                            >
                                 <Image 
                                     style={[
                                         styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
@@ -331,12 +406,9 @@ export default function HomeScreen() {
                                 />
                             </TouchableOpacity>
                         )}
-                    </>  
+                    </View>  
                 )}
-                
-                {/* <MessageInput onShouldSend={getCompletion} /> */}
-            </View>
-            
+            </KeyboardAvoidingView>
         </LinearGradient>
     )
 }
@@ -347,12 +419,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'stretch',
         backgroundColor: '#131313',
+        paddingHorizontal: scale(20),
     },
     mainContainer: {
         flex: 1,
         flexDirection: 'column',
         marginTop: scale(30),
-        marginHorizontal: scale(20),
+        
     },
     header: {
         flexDirection: 'row',
@@ -374,7 +447,7 @@ const styles = StyleSheet.create({
         marginBottom: scale(4),
     },
     chatBox: {
-        height: '90%',
+        flex: 1,
         backgroundColor: 'rgba(30, 41, 59, 0.8)',
         borderRadius: scale(8),
         padding: scale(4),
@@ -392,7 +465,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgb(8, 16, 36)',
         borderRadius: scale(8),
         padding: scale(7),
-        borderTopLeftRadius: 0,
+        borderBottomLeftRadius: 0,
     },
     assistantMessageText: {
         color: '#F9FAFB',
@@ -407,7 +480,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgb(5, 153, 179)',
         borderRadius: scale(8),
         padding: scale(7),
-        borderTopRightRadius: 0,
+        borderBottomRightRadius: 0,
     },
     userMessageText: {
         color: '#FFFFFF',
@@ -417,12 +490,10 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: scale(20),
+        marginVertical: scale(10),
     },
     microphone: {
         borderRadius: scale(8),
-        marginTop: scale(-5),
-        marginHorizontal: scale(20),
         width: scale(60),
         height: scale(60),
     },
@@ -439,12 +510,21 @@ const styles = StyleSheet.create({
         position: 'absolute',
         bottom: scale(80),
         alignSelf: 'center',
-        backgroundColor: 'rgba(0,0,0,0.7)',
+        backgroundColor: '#07002e',
         padding: scale(10),
         borderRadius: scale(5),
+        elevation: 1, // Android shadow
+        shadowColor: '#000', // iOS shadow
+        shadowOffset: {
+            width: 0,
+            height: 1,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.00,
+        zIndex: 1000,
     },
     downloadText: {
-        color: 'white',
+        color: '#fff',
         fontSize: scale(12),
     },
 });

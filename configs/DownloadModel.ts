@@ -19,7 +19,7 @@ export const downloadModel = async (
     // console.log("modelUrl : ", modelUrl)
 
     const downloadResult = await RNFS.downloadFile({
-      fromUrl: 'https://huggingface.co/medmekk/Llama-3.2-1B-Instruct.GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_0.gguf',
+      fromUrl: 'https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_0.gguf',
       toFile: destPath,
       progressDivider: 5,
       begin: (res) => {
@@ -37,6 +37,7 @@ export const downloadModel = async (
     if (downloadResult.statusCode === 200) {
       return destPath;
     } else {
+      
       throw new Error(`Download failed with status code: ${downloadResult.statusCode}`);
     }
   } catch (error) {

@@ -4,6 +4,8 @@ import {
     useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
 import * as Device from 'expo-device';
+import * as Speech from 'expo-speech';
+import { Platform } from 'react-native';
 
 type SpeechRecognitionProps = {
     onStart?: () => void;
@@ -91,4 +93,14 @@ export const useSpeechRecognition = (props: SpeechRecognitionProps) => {
         startRecognition: handleStart,
         stopRecognition: handleStop,
     };
+};
+
+export const useSpeechOutput = async (text:string) => {
+    const options = {
+        voice: Platform.OS === 'ios' ? 'com.apple.voice.compact.en-GB.Daniel' : 'en-gb-x-gbb-local',
+        language: 'en-GB',
+        pitch: 0.85,
+        rate: 0.85
+    };
+    Speech.speak(text, options);
 };
