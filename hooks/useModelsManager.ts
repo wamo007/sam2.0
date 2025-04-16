@@ -4,7 +4,7 @@ import { downloadModel } from "@/configs/DownloadModel";
 import { Alert, Platform } from "react-native";
 import { useState } from "react";
 
-export const useLLMProcessor = () => {
+export const useModelsManager = () => {
 
   const [progress, setProgress] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
@@ -12,6 +12,7 @@ export const useLLMProcessor = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isModelReady, setIsModelReady] = useState<boolean>(false);
+  const [chosenVoice, setChosenVoice] = useState<string>('uk-alba')
 
   const checkFileExists = async (destPath: string) => {
     try {
@@ -47,7 +48,7 @@ export const useLLMProcessor = () => {
       // console.log("before download");
       // console.log(isDownloading);
 
-      const destPath = await downloadModel((progress) =>
+      const destPath = await downloadModel(chosenVoice, (progress) =>
         setProgress(progress)
       );
 
@@ -119,6 +120,8 @@ export const useLLMProcessor = () => {
     isModelReady,
     isDownloading,
     progress,
+    chosenVoice,
+    setChosenVoice,
     checkFileExists,
     handleDownloadModel,
     loadModel,

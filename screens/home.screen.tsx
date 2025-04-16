@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { scale } from 'react-native-size-matters'
 import { useKeepAwake } from 'expo-keep-awake'
 import MessageInput from '../components/MessageInput';
-import { useLLMProcessor } from '@/hooks/useLLMProcessor';
+import { useModelsManager } from '@/hooks/useModelsManager';
 import { useSpeechRecognition, useSpeechOutput } from '../hooks/useVoiceInOut';
 import { addMessage, getAllMessages } from '@/configs/Database';
 import { Message } from '@/configs/dbTypes';
@@ -30,7 +30,7 @@ export default function HomeScreen() {
         isDownloading,
         isModelReady,
         progress
-    } = useLLMProcessor();
+    } = useModelsManager();
 
     const db = useSQLiteContext()
     const modelName = 'Llama-3.2-1B-Instruct-Q4_0.gguf'
@@ -286,8 +286,8 @@ export default function HomeScreen() {
     }
 
     const exportDB = async () => {
-        await useSpeechOutput('Testing voice');
-        // await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
+        // await useSpeechOutput('Testing voice');
+        await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
     }
 
     const handleStart = async () => {
@@ -295,33 +295,33 @@ export default function HomeScreen() {
         setTalkingMode(true);
     };
 
-    const checkModelsDirectory = async () => {
-        const modelsDirPath = `${FileSystem.documentDirectory}models`;
+    // const checkModelsDirectory = async () => {
+    //     const modelsDirPath = `${FileSystem.documentDirectory}models`;
         
-        try {
-            const dirInfo = await FileSystem.getInfoAsync(modelsDirPath);
+    //     try {
+    //         const dirInfo = await FileSystem.getInfoAsync(modelsDirPath);
             
-            if (dirInfo.exists) {
-                console.log('Models directory exists');
+    //         if (dirInfo.exists) {
+    //             console.log('Models directory exists');
                 
-                // List directory contents
-                const contents = await FileSystem.readDirectoryAsync(modelsDirPath);
-                console.log('Contents of models directory:', contents);
+    //             // List directory contents
+    //             const contents = await FileSystem.readDirectoryAsync(modelsDirPath);
+    //             console.log('Contents of models directory:', contents);
                 
-                return contents;
-            } else {
-                console.log('Models directory does not exist');
-                return [];
-            }
-        } catch (error) {
-            console.error('Error checking models directory:', error);
-            return [];
-        }
-    };
+    //             return contents;
+    //         } else {
+    //             console.log('Models directory does not exist');
+    //             return [];
+    //         }
+    //     } catch (error) {
+    //         console.error('Error checking models directory:', error);
+    //         return [];
+    //     }
+    // };
 
-    useEffect(() => {
-        checkModelsDirectory();
-    }, []);
+    // useEffect(() => {
+    //     checkModelsDirectory();
+    // }, []);
     
     useKeepAwake();
     return (
@@ -441,7 +441,7 @@ export default function HomeScreen() {
                                 />
                             </TouchableOpacity>
                         ) : (
-                            <TouchableOpacity onPress={() => exportDB()}>
+                            <TouchableOpacity onPress={() => setTalkingMode(false)}>
                                 <Image 
                                     style={[
                                         styles.microphone, {backgroundColor: '#06B6D4'}

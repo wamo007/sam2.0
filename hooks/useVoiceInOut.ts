@@ -5,8 +5,7 @@ import {
 } from "expo-speech-recognition";
 import * as Device from 'expo-device';
 import TTSManager from 'react-native-sherpa-onnx-offline-tts';
-import { getTTSConfig } from '@/configs/TTSConfig';
-import { Platform } from 'react-native';
+import { useModelsManager } from './useModelsManager';
 
 type SpeechRecognitionProps = {
     onStart?: () => void;
@@ -42,8 +41,8 @@ export const useSpeechRecognition = (props: SpeechRecognitionProps) => {
             requiresOnDeviceRecognition: false,
             addsPunctuation: isAndroid13OrHigher,
             androidIntentOptions: {
-                EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 4000,
-                EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 3000,
+                EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000,
+                EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 2500,
                 EXTRA_MASK_OFFENSIVE_WORDS: false,
             },            
         });
@@ -96,22 +95,26 @@ export const useSpeechRecognition = (props: SpeechRecognitionProps) => {
     };
 };
 
-// import { downloadTTSModel } from '@/configs/DownloadTTSModel';
-
-// let isTTSInitialized = false;
-
 export const useSpeechOutput = async (text: string) => {
-    try {
-        // if (!isTTSInitialized) {
-        //     // Download model files if not already done
-        //     await downloadTTSModel((progress) => {
-        //         console.log(`Download progress: ${Math.round(progress)}%`);
-        //     });
-        //     isTTSInitialized = true;
-        // }
 
-        // const config = getTTSConfig();
-        TTSManager.initialize('female');
+    const { chosenVoice } = useModelsManager();
+
+    const getVoiceModel = (voice: string): string => {
+        switch (voice) {
+            case 'uk-alba':
+                return 'en_GB-alba-medium.onnx';
+            case 'us-hfc':
+                return 'en_US-hfc_female-medium.onnx';
+            case 'us-ryan':
+                return 'en_US-ryan-medium.onnx';
+            default:
+                return 'en_US-ryan-medium.onnx'; // Default voice
+        }
+    };
+
+    try {
+        // const voiceModel = getVoiceModel(chosenVoice)
+        TTSManager.initialize('en_GB-alba-medium.onnx');
         await TTSManager.generateAndPlay(text, 0, 1.0);
     } catch (error) {
         console.error('TTS Error:', error);
