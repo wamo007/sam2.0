@@ -1,4 +1,5 @@
 import RNFS from "react-native-fs";
+import { unzip } from "react-native-zip-archive";
 
 export const downloadModel = async (
   // modelName: string,
@@ -7,6 +8,7 @@ export const downloadModel = async (
 ): Promise<string> => {
   console.log(RNFS.DocumentDirectoryPath)
   const destPath = `${RNFS.DocumentDirectoryPath}/Llama-3.2-1B-Instruct-Q4_0.gguf`;
+  const destPathTTS = `${RNFS.DocumentDirectoryPath}/models.zip`;
   try {
     const fileExists = await RNFS.exists(destPath);
 
@@ -35,6 +37,23 @@ export const downloadModel = async (
     }).promise;
     console.log("right after download")
     if (downloadResult.statusCode === 200) {
+      const downloadResult = await RNFS.downloadFile({
+        fromUrl: 'https://huggingface.co/shamil010/mymodel/resolve/main/models.zip',
+        toFile: destPathTTS,
+        progressDivider: 5,
+        begin: (res) => {
+          console.log("Response begin ===\n\n");
+          console.log(res);
+        },
+        progress: ({ bytesWritten, contentLength }: { bytesWritten: number; contentLength: number }) => {
+          console.log("Response written ===\n\n");
+          const progress = (bytesWritten / contentLength) * 100;
+          console.log("progress : ",progress)
+          onProgress(Math.floor(progress));
+        },
+      }).promise;
+      await unzip(destPathTTS, `${RNFS.DocumentDirectoryPath}/models`);
+      await RNFS.unlink(destPathTTS);
       return destPath;
     } else {
       

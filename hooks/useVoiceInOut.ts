@@ -4,7 +4,8 @@ import {
     useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
 import * as Device from 'expo-device';
-import * as Speech from 'expo-speech';
+import TTSManager from 'react-native-sherpa-onnx-offline-tts';
+import { getTTSConfig } from '@/configs/TTSConfig';
 import { Platform } from 'react-native';
 
 type SpeechRecognitionProps = {
@@ -95,12 +96,25 @@ export const useSpeechRecognition = (props: SpeechRecognitionProps) => {
     };
 };
 
-export const useSpeechOutput = async (text:string) => {
-    const options = {
-        voice: Platform.OS === 'ios' ? 'com.apple.voice.compact.en-GB.Daniel' : 'en-gb-x-gbb-local',
-        language: 'en-GB',
-        pitch: 0.85,
-        rate: 0.85
-    };
-    Speech.speak(text, options);
+// import { downloadTTSModel } from '@/configs/DownloadTTSModel';
+
+// let isTTSInitialized = false;
+
+export const useSpeechOutput = async (text: string) => {
+    try {
+        // if (!isTTSInitialized) {
+        //     // Download model files if not already done
+        //     await downloadTTSModel((progress) => {
+        //         console.log(`Download progress: ${Math.round(progress)}%`);
+        //     });
+        //     isTTSInitialized = true;
+        // }
+
+        // const config = getTTSConfig();
+        TTSManager.initialize('female');
+        await TTSManager.generateAndPlay(text, 0, 1.0);
+    } catch (error) {
+        console.error('TTS Error:', error);
+        throw error;
+    }
 };

@@ -286,7 +286,8 @@ export default function HomeScreen() {
     }
 
     const exportDB = async () => {
-        await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
+        await useSpeechOutput('Testing voice');
+        // await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
     }
 
     const handleStart = async () => {
@@ -294,6 +295,34 @@ export default function HomeScreen() {
         setTalkingMode(true);
     };
 
+    const checkModelsDirectory = async () => {
+        const modelsDirPath = `${FileSystem.documentDirectory}models`;
+        
+        try {
+            const dirInfo = await FileSystem.getInfoAsync(modelsDirPath);
+            
+            if (dirInfo.exists) {
+                console.log('Models directory exists');
+                
+                // List directory contents
+                const contents = await FileSystem.readDirectoryAsync(modelsDirPath);
+                console.log('Contents of models directory:', contents);
+                
+                return contents;
+            } else {
+                console.log('Models directory does not exist');
+                return [];
+            }
+        } catch (error) {
+            console.error('Error checking models directory:', error);
+            return [];
+        }
+    };
+
+    useEffect(() => {
+        checkModelsDirectory();
+    }, []);
+    
     useKeepAwake();
     return (
         <LinearGradient
@@ -412,7 +441,7 @@ export default function HomeScreen() {
                                 />
                             </TouchableOpacity>
                         ) : (
-                            <TouchableOpacity onPress={() => setTalkingMode(false)}>
+                            <TouchableOpacity onPress={() => exportDB()}>
                                 <Image 
                                     style={[
                                         styles.microphone, {backgroundColor: '#06B6D4'}
