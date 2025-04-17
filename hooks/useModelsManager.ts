@@ -12,7 +12,7 @@ export const useModelsManager = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isModelReady, setIsModelReady] = useState<boolean>(false);
-  const [chosenVoice, setChosenVoice] = useState<string>('uk-alba')
+  const [chosenVoice, setChosenVoice] = useState<string>('uk-alba');
 
   const checkFileExists = async (destPath: string) => {
     try {

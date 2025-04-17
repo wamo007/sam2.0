@@ -5,7 +5,7 @@ import {
 } from "expo-speech-recognition";
 import * as Device from 'expo-device';
 import TTSManager from 'react-native-sherpa-onnx-offline-tts';
-import { useModelsManager } from './useModelsManager';
+import { getTTSConfig } from '@/configs/TTSConfig';
 
 type SpeechRecognitionProps = {
     onStart?: () => void;
@@ -97,24 +97,25 @@ export const useSpeechRecognition = (props: SpeechRecognitionProps) => {
 
 export const useSpeechOutput = async (text: string) => {
 
-    const { chosenVoice } = useModelsManager();
+    // const { chosenVoice } = useModelsManager();
 
-    const getVoiceModel = (voice: string): string => {
-        switch (voice) {
-            case 'uk-alba':
-                return 'en_GB-alba-medium.onnx';
-            case 'us-hfc':
-                return 'en_US-hfc_female-medium.onnx';
-            case 'us-ryan':
-                return 'en_US-ryan-medium.onnx';
-            default:
-                return 'en_US-ryan-medium.onnx'; // Default voice
-        }
-    };
+    // const getVoiceModel = (voice: string): string => {
+    //     switch (voice) {
+    //         case 'uk-alba':
+    //             return 'en_GB-alba-medium.onnx';
+    //         case 'us-hfc':
+    //             return 'en_US-hfc_female-medium.onnx';
+    //         case 'us-ryan':
+    //             return 'en_US-ryan-medium.onnx';
+    //         default:
+    //             return 'en_US-ryan-medium.onnx'; // Default voice
+    //     }
+    // };
 
     try {
         // const voiceModel = getVoiceModel(chosenVoice)
-        TTSManager.initialize('en_GB-alba-medium.onnx');
+        // const config = getTTSConfig();
+        TTSManager.initialize("female");
         await TTSManager.generateAndPlay(text, 0, 1.0);
     } catch (error) {
         console.error('TTS Error:', error);

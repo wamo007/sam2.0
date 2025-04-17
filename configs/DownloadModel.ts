@@ -10,6 +10,9 @@ export const downloadModel = async (
   
   console.log(RNFS.DocumentDirectoryPath)
   const destPath = `${RNFS.DocumentDirectoryPath}/Llama-3.2-1B-Instruct-Q4_0.gguf`;
+  // const modelsDir = `${RNFS.DocumentDirectoryPath}/models`;
+  // await RNFS.mkdir(modelsDir);
+  // const destPathTTS = `${modelsDir}/en_GB-alba-medium.onnx`;
   const destPathTTS = `${RNFS.DocumentDirectoryPath}/models-${voice}.zip`;
   try {
     const fileExists = await RNFS.exists(destPath);

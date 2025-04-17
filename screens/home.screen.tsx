@@ -20,6 +20,7 @@ export default function HomeScreen() {
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [showReadyMessage, setShowReadyMessage] = useState<boolean>(false);
     const [talkingMode, setTalkingMode] = useState<boolean>(true);
+    const [toTalk, setToTalk] = useState<boolean>(false);
     const scrollViewRef = useRef<ScrollView>(null);
     
     const {
@@ -241,7 +242,9 @@ export default function HomeScreen() {
                     .trim();
                   if (talkingMode) {
                     try {
+                        setToTalk(true);
                         await useSpeechOutput(finalContent);
+                        await handleStart();
                     } catch (error) {
                         console.error("Error in speech sequence:", error);
                         // Optionally disable talking mode if there's an error
@@ -270,10 +273,6 @@ export default function HomeScreen() {
 
                 } finally {
                   setIsGenerating(false);
-                  if (talkingMode) {
-                    setTalkingMode(false);
-                    await handleStart();
-                  }
                 }
             } catch (error) {
                 console.error("Error processing query:", error);
@@ -286,13 +285,13 @@ export default function HomeScreen() {
     }
 
     const exportDB = async () => {
-        // await useSpeechOutput('Testing voice');
-        await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
+        await useSpeechOutput('Testing voice');
+        // await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
     }
 
     const handleStart = async () => {
+        setToTalk(false);
         await startRecognition();
-        setTalkingMode(true);
     };
 
     // const checkModelsDirectory = async () => {
@@ -301,6 +300,7 @@ export default function HomeScreen() {
     //     try {
     //         const dirInfo = await FileSystem.getInfoAsync(modelsDirPath);
             
+
     //         if (dirInfo.exists) {
     //             console.log('Models directory exists');
                 
