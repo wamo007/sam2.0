@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
     ExpoSpeechRecognitionModule,
     useSpeechRecognitionEvent,
@@ -12,15 +12,18 @@ type SpeechRecognitionProps = {
     onEnd?: (finalTranscript: string) => void;
     onTranscriptUpdate?: (transcript: string, isDraft: boolean) => void;
     onError?: (error: any) => void;
+    onTTSComplete?: () => void;
 };
 
-export const useSpeechRecognition = (props: SpeechRecognitionProps) => {
+export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
     const [recognizing, setRecognizing] = useState(false);
+    const [ttsActive, setTtsActive] = useState(false);
     const [hasSpeech, setHasSpeech] = useState(false);
     const [transcriptBuffer, setTranscriptBuffer] = useState("");
     const [lastProcessedTranscript, setLastProcessedTranscript] = useState("");
 
-    const handleStart = useCallback(async () => {
+
+    const startRecognition = useCallback(async () => {
         const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
         if (!result.granted) {
             console.warn("Permissions not granted", result);
@@ -49,12 +52,13 @@ export const useSpeechRecognition = (props: SpeechRecognitionProps) => {
         return true;
     }, []);
 
-    const handleStop = useCallback(() => {
+    const stopRecognition = useCallback(() => {
         ExpoSpeechRecognitionModule.stop();
     }, []);
 
     useSpeechRecognitionEvent("start", () => {
         setRecognizing(true);
+        setTtsActive(false);
         props.onStart?.();
     });
 
@@ -88,37 +92,32 @@ export const useSpeechRecognition = (props: SpeechRecognitionProps) => {
         props.onError?.(event);
     });
 
+    const speak = useCallback(async (text: string) => {
+        try {
+            setTtsActive(true);
+            TTSManager.initialize("en_GB-alba-medium.onnx");
+            await TTSManager.generateAndPlay(text, 0, 0.8);
+            
+            // Estimate TTS duration (520ms per word + 1s buffer)
+            const wordCount = text.split(/\s+/).length;
+            const estimatedDuration = Math.max(2000, wordCount * 520 + 1000);
+            
+            setTimeout(() => {
+                setTtsActive(false);
+                props.onTTSComplete?.();
+            }, estimatedDuration);
+        } catch (error) {
+            console.error('TTS Error:', error);
+            setTtsActive(false);
+            throw error;
+        }
+    }, []);
+
     return {
         recognizing,
-        startRecognition: handleStart,
-        stopRecognition: handleStop,
+        ttsActive,
+        startRecognition,
+        stopRecognition,
+        speak
     };
-};
-
-export const useSpeechOutput = async (text: string) => {
-
-    // const { chosenVoice } = useModelsManager();
-
-    // const getVoiceModel = (voice: string): string => {
-    //     switch (voice) {
-    //         case 'uk-alba':
-    //             return 'en_GB-alba-medium.onnx';
-    //         case 'us-hfc':
-    //             return 'en_US-hfc_female-medium.onnx';
-    //         case 'us-ryan':
-    //             return 'en_US-ryan-medium.onnx';
-    //         default:
-    //             return 'en_US-ryan-medium.onnx'; // Default voice
-    //     }
-    // };
-
-    try {
-        // const voiceModel = getVoiceModel(chosenVoice)
-        // const config = getTTSConfig();
-        TTSManager.initialize("female");
-        await TTSManager.generateAndPlay(text, 0, 1.0);
-    } catch (error) {
-        console.error('TTS Error:', error);
-        throw error;
-    }
 };

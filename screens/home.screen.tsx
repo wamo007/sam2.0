@@ -5,7 +5,7 @@ import { scale } from 'react-native-size-matters'
 import { useKeepAwake } from 'expo-keep-awake'
 import MessageInput from '../components/MessageInput';
 import { useModelsManager } from '@/hooks/useModelsManager';
-import { useSpeechRecognition, useSpeechOutput } from '../hooks/useVoiceInOut';
+import { useVoiceInteraction } from '../hooks/useVoiceInOut';
 import { addMessage, getAllMessages } from '@/configs/Database';
 import { Message } from '@/configs/dbTypes';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -20,7 +20,6 @@ export default function HomeScreen() {
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [showReadyMessage, setShowReadyMessage] = useState<boolean>(false);
     const [talkingMode, setTalkingMode] = useState<boolean>(true);
-    const [toTalk, setToTalk] = useState<boolean>(false);
     const scrollViewRef = useRef<ScrollView>(null);
     
     const {
@@ -91,7 +90,13 @@ export default function HomeScreen() {
         fetchMessages();
     }, [db]);
 
-    const { recognizing, startRecognition, stopRecognition } = useSpeechRecognition({
+    const {
+        recognizing,
+        ttsActive,
+        startRecognition,
+        stopRecognition,
+        speak
+    } = useVoiceInteraction({
         onStart: () => {},
         onEnd: async (finalTranscript) => {
             if (finalTranscript.trim()) {
@@ -106,6 +111,11 @@ export default function HomeScreen() {
         },
         onError: (error) => {
             console.log("Speech recognition error:", error);
+        },
+        onTTSComplete: () => {
+            if (talkingMode) {
+                handleStart();
+            }
         }
     });
 
@@ -242,9 +252,7 @@ export default function HomeScreen() {
                     .trim();
                   if (talkingMode) {
                     try {
-                        setToTalk(true);
-                        await useSpeechOutput(finalContent);
-                        await handleStart();
+                        await speak(finalContent);
                     } catch (error) {
                         console.error("Error in speech sequence:", error);
                         // Optionally disable talking mode if there's an error
@@ -285,12 +293,11 @@ export default function HomeScreen() {
     }
 
     const exportDB = async () => {
-        await useSpeechOutput('Testing voice');
+        await speak('Testing voice');
         // await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
     }
 
     const handleStart = async () => {
-        setToTalk(false);
         await startRecognition();
     };
 
