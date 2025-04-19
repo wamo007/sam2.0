@@ -177,8 +177,14 @@ export default function HomeScreen() {
                     return;
                 }
                 
+                const lastTenMessages = messages.slice(-10);
+                if (lastTenMessages.some(msg => msg.role !== 'system')) {
+                    lastTenMessages.unshift({ 
+                        role: 'system', 
+                        content: `You are SAM - a sophisticated AI assistant designed for voice-based interaction. Your persona is inspired by JARVIS, the intelligent and helpful AI from the Iron Man movies. You are knowledgeable, efficient, and have a slightly formal yet friendly and helpful tone. Your primary function is to assist the user through spoken language. When responding, focus solely on the content of your spoken words. Do not include any textual descriptions of physical actions, body language, or vocal inflections. For example, avoid phrases like "(pauses slightly)", "(speaks with enthusiasm)", "(nods)", or "(looks thoughtful)". Your communication should be entirely through the words you speak. Your goal is to understand the user''s requests and provide accurate, helpful, and concise responses. You can answer questions, provide information, follow instructions, and engage in conversation in a manner consistent with the JARVIS persona. Maintain a helpful and intelligent demeanor in all your spoken interactions.` });
+                }
                 const newConversation: Message[] = [
-                    ...messages,
+                    ...lastTenMessages,
                     { role: "user", content: newMessage, isDraft: false },
                 ];
                 setIsGenerating(true);
@@ -233,6 +239,7 @@ export default function HomeScreen() {
 
                       const visibleContent = currentAssistantMessage
                           .replace(/<think>.*?<\/think>/gs, "")
+                          .replace(/\*/g, "")
                           .trim()
             
                       setMessages((prev) => {
@@ -249,6 +256,7 @@ export default function HomeScreen() {
                 //   After completion is done, save final message
                   const finalContent = currentAssistantMessage
                     .replace(/<think>.*?<\/think>/gs, "")
+                    .replace(/\*/g, "")
                     .trim();
                   if (talkingMode) {
                     try {
@@ -389,9 +397,9 @@ export default function HomeScreen() {
                                             return (
                                             <View key={index} style={styles.assistantMessageContainer}>
                                                 <View style={styles.assistantMessage}>
-                                                <Text style={styles.assistantMessageText}>
-                                                    {message.content}
-                                                </Text>
+                                                    <Text style={styles.assistantMessageText}>
+                                                        {message.content}
+                                                    </Text>
                                                 </View>
                                             </View>
                                             )

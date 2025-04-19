@@ -5,7 +5,6 @@ import {
 } from "expo-speech-recognition";
 import * as Device from 'expo-device';
 import TTSManager from 'react-native-sherpa-onnx-offline-tts';
-import { getTTSConfig } from '@/configs/TTSConfig';
 
 type SpeechRecognitionProps = {
     onStart?: () => void;
@@ -100,7 +99,7 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
             
             // Estimate TTS duration (520ms per word + 1s buffer)
             const wordCount = text.split(/\s+/).length;
-            const estimatedDuration = Math.max(2000, wordCount * 520 + 1000);
+            const estimatedDuration = Math.max(2000, wordCount * 350 + 1000);
             
             setTimeout(() => {
                 setTtsActive(false);
