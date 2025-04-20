@@ -1,75 +1,53 @@
-import * as FileSystem from 'expo-file-system';
-import { unzip } from 'react-native-zip-archive';
+import RNFS from "react-native-fs";
+import { unzip } from "react-native-zip-archive";
 
 export const downloadTTSModel = async (
+  // modelName: string,
+  // modelUrl: string,
+  voice: string,
   onProgress: (progress: number) => void
-): Promise<{modelPath: string, tokensPath: string, dataDirPath: string}> => {
-  const baseUrl = 'https://huggingface.co/shamil010/mymodel/resolve/main/';
-  const modelName = 'en_GB-alba-medium.onnx';
-  const tokensName = 'tokens.txt';
-  const dataDirName = 'espeak-ng-data';
-
-  const modelUrl = `${baseUrl}${modelName}`;
-  const tokensUrl = `${baseUrl}${tokensName}`;
-  const dataDirUrl = `${baseUrl}${dataDirName}.zip`;
-
-  const modelDir = `${FileSystem.documentDirectory}tts_models/`;
-  const modelPath = `${modelDir}${modelName}`;
-  const tokensPath = `${modelDir}${tokensName}`;
-  const dataDirPath = `${modelDir}${dataDirName}/`;
-
-  // Create directory if it doesn't exist
-  await FileSystem.makeDirectoryAsync(modelDir, { intermediates: true });
-
-  // Download model file
-  const modelDownload = FileSystem.createDownloadResumable(
-    modelUrl,
-    modelPath,
-    {},
-    ({ totalBytesWritten, totalBytesExpectedToWrite }) => {
-      onProgress(totalBytesWritten / totalBytesExpectedToWrite * 50);
-    }
-  );
-
-  // Download tokens file
-  const tokensDownload = FileSystem.createDownloadResumable(
-    tokensUrl,
-    tokensPath,
-    {},
-    ({ totalBytesWritten, totalBytesExpectedToWrite }) => {
-      onProgress(50 + (totalBytesWritten / totalBytesExpectedToWrite * 20));
-    }
-  );
-
-  // Download and extract espeak-ng-data
-  const dataZipPath = `${modelDir}espeak-ng-data.zip`;
-  const dataDownload = FileSystem.createDownloadResumable(
-    dataDirUrl,
-    dataZipPath,
-    {},
-    ({ totalBytesWritten, totalBytesExpectedToWrite }) => {
-      onProgress(70 + (totalBytesWritten / totalBytesExpectedToWrite * 30));
-    }
-  );
-
+): Promise<string> => {
+  
+  const destPathTTS = `${RNFS.DocumentDirectoryPath}/models-${voice}-tts.zip`;
   try {
-    await Promise.all([
-      modelDownload.downloadAsync(),
-      tokensDownload.downloadAsync(),
-      dataDownload.downloadAsync()
-    ]);
+    const fileExists = await RNFS.exists(destPathTTS);
 
-    // Extract espeak-ng-data
-    await unzip(dataZipPath, dataDirPath);
-    await FileSystem.deleteAsync(dataZipPath);
+    // If it exists, delete it
+    if (fileExists) {
+      await RNFS.unlink(destPathTTS);
+      console.log(`Deleted existing file at ${destPathTTS}`);
+    }
+    // console.log("right before download")
+    // console.log("modelUrl : ", modelUrl)
 
-    return {
-      modelPath,
-      tokensPath,
-      dataDirPath
-    };
+    const downloadResult = await RNFS.downloadFile({
+      fromUrl: `https://huggingface.co/shamil010/mymodel/resolve/main/models-${voice}-tts.zip`,
+      toFile: destPathTTS,
+      progressDivider: 5,
+      begin: (res) => {
+        // console.log("Response begin ===\n\n");
+        console.log(res);
+      },
+      progress: ({ bytesWritten, contentLength }: { bytesWritten: number; contentLength: number }) => {
+        // console.log("Response written ===\n\n");
+        const progress = (bytesWritten / contentLength) * 100;
+        // console.log("progress : ",progress)
+        onProgress(Math.floor(progress));
+      },
+    }).promise;
+    await unzip(destPathTTS, `${RNFS.DocumentDirectoryPath}/models`);
+    await RNFS.unlink(destPathTTS);
+      
+    if (downloadResult.statusCode === 200) {
+      return destPathTTS;
+    } else {
+      throw new Error(`Download failed with status code: ${downloadResult.statusCode}`);
+    }
   } catch (error) {
-    console.error('TTS Model download failed:', error);
-    throw error;
+    if (error instanceof Error) {
+      throw new Error(`Failed to download the voice model: ${error.message}`);
+    } else {
+      throw new Error('Failed to download the voice model: Unknown error');
+    }
   }
 };

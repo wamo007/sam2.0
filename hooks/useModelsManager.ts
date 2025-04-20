@@ -3,20 +3,43 @@ import * as FileSystem from "expo-file-system";
 import { downloadModel } from "@/configs/DownloadModel";
 import { Alert, Platform } from "react-native";
 import { useState } from "react";
+import { downloadTTSModel } from "@/configs/DownloadTTSModel";
 
 export const useModelsManager = () => {
 
   const [progress, setProgress] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
+  const [isTTSDownloading, setIsTTSDownloading] = useState<boolean>(false);
   const [context, setContext] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isModelReady, setIsModelReady] = useState<boolean>(false);
-  const [chosenVoice, setChosenVoice] = useState<string>('uk-alba');
+  const [chosenLang, setChosenLang] = useState<string>('uk');
 
-  const checkFileExists = async (destPath: string) => {
+  const directoryTTSPath = `${FileSystem.documentDirectory}models/`;
+  const findOnnxFile = async (directoryTTSPath: string): Promise<string | null> => {
     try {
-      const initialFileInfo = await FileSystem.getInfoAsync(destPath);
+      const dirInfo = await FileSystem.getInfoAsync(directoryTTSPath);
+      if (!dirInfo.exists || !dirInfo.isDirectory) {
+        return null;
+      }
+
+      const files = await FileSystem.readDirectoryAsync(directoryTTSPath);
+      const onnxFile = files.find(file => file.endsWith('.onnx'));
+      if (files.length === 3 && onnxFile) {
+        return onnxFile;
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      return null;
+    }
+  };
+
+  const checkModelExists = async (modelName: string) => {
+    try {
+      const initialFileInfo = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}${modelName}`);
       if (initialFileInfo.exists && initialFileInfo.size > 770000000) {
         // console.log("File exists:", true);
         return true;
@@ -27,40 +50,64 @@ export const useModelsManager = () => {
     }
   };
 
+  const checkTTSModelExists = async () => {
+    if (directoryTTSPath) {
+      const ttsModelName = await findOnnxFile(directoryTTSPath);
+      if (!ttsModelName) {
+        return false;
+      }
+      const initialFolderInfo = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}models/`);
+      if (initialFolderInfo.exists && initialFolderInfo.isDirectory) {
+        return true;
+      }
+    } else {
+      return false;
+    }
+  };
+
   const handleDownloadModel = async (modelName: string) => {
 
-    setIsDownloading(true);
     setProgress(0);
 
-    const destPath = `${FileSystem.documentDirectory}${modelName}`;
-    if (await checkFileExists(destPath)) {
-      const success = await loadModel(modelName);
-      if (success) {
-        Alert.alert(
-          "Info",
-          `File ${destPath} already exists, we will load it directly.`
-        );
-        setIsDownloading(false);
+    if (await checkModelExists(modelName)) {
+      const modelExists = await loadModel(modelName);
+      if (modelExists) {
         return;
       }
+    } else {
+      setIsDownloading(true);
+      try {
+        await downloadModel((progress) =>
+          setProgress(progress)
+        );
+    
+        // After downloading, load the model
+        await loadModel(modelName);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        Alert.alert("Error", `Download failed: ${errorMessage}`);
+      } finally {
+        setIsDownloading(false);
+      }
     }
-    try {
-      // console.log("before download");
-      // console.log(isDownloading);
-
-      const destPath = await downloadModel(chosenVoice, (progress) =>
-        setProgress(progress)
-      );
-
-      // After downloading, load the model
-      await loadModel(modelName);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      Alert.alert("Error", `Download failed: ${errorMessage}`);
-    } finally {
-      setIsDownloading(false);
+    if (!(await checkTTSModelExists())) {
+      setIsTTSDownloading(true);
+      try {
+        await downloadTTSModel(chosenLang, (progress) =>
+          setProgress(progress)
+        );
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        Alert.alert("Error", `Download failed: ${errorMessage}`);
+      } finally {
+        setIsTTSDownloading(false);
+      }
+    } else {
+      return;
     }
+    
   };
 
   // const stopGeneration = async () => {
@@ -119,10 +166,12 @@ export const useModelsManager = () => {
     isGenerating,
     isModelReady,
     isDownloading,
+    isTTSDownloading,
     progress,
-    chosenVoice,
-    setChosenVoice,
-    checkFileExists,
+    chosenLang,
+    setChosenLang,
+    checkModelExists,
+    checkTTSModelExists,
     handleDownloadModel,
     loadModel,
     setIsGenerating,

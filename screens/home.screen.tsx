@@ -20,33 +20,66 @@ export default function HomeScreen() {
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [showReadyMessage, setShowReadyMessage] = useState<boolean>(false);
     const [talkingMode, setTalkingMode] = useState<boolean>(true);
+    const [userName, setUserName] = useState<string>('User');
+
     const scrollViewRef = useRef<ScrollView>(null);
-    
+
     const {
         handleDownloadModel,
-        checkFileExists,
+        checkModelExists,
+        checkTTSModelExists,
         loadModel,
         context,
         isDownloading,
+        isTTSDownloading,
         isModelReady,
         progress
     } = useModelsManager();
 
     const db = useSQLiteContext()
     const modelName = 'Llama-3.2-1B-Instruct-Q4_0.gguf'
-    const destPath = `${FileSystem.documentDirectory}${modelName}`
 
     useEffect(() => {
         const checkModel = async () => {
-            if (!(await checkFileExists(destPath))) {
+            if (!(await checkModelExists(modelName) && await checkTTSModelExists())) {
                 Alert.alert(
-                    "Confirm Model Download",
-                    `I need to download my AI model to function properly.`,
+                    "Confirm Download of the Models",
+                    `I need to download my AI and speech models to function properly.`,
                     [
                       { text: "OK", onPress: async () => {
                             await handleDownloadModel(modelName) 
                         }
                       }
+                    ],
+                    { cancelable: false }
+                );
+            } else if (!(await checkTTSModelExists()) && (await checkModelExists(modelName))) {
+                Alert.alert(
+                    "Speech model is missing or corrupted...",
+                    `I need to re-download the speech model to talk.`,
+                    [
+                      {
+                          text: "Cancel", onPress: async () => {
+                            await loadModel(modelName) 
+                          },
+                          style: "cancel"
+                      },
+                      { text: "OK", onPress: async () => {
+                            await handleDownloadModel(modelName) 
+                        }
+                      }
+                    ],
+                    { cancelable: true }
+                );
+            } else if ((await checkTTSModelExists()) && !(await checkModelExists(modelName))) {
+                Alert.alert(
+                    "AI model is missing or corrupted...",
+                    `I need to re-download the AI model to function properly.`,
+                    [
+                        { text: "OK", onPress: async () => {
+                                await handleDownloadModel(modelName) 
+                            }
+                        }
                     ],
                     { cancelable: false }
                 );
@@ -58,7 +91,7 @@ export default function HomeScreen() {
     }, []);  
 
     useEffect(() => {
-        if (!isDownloading && isModelReady) {
+        if (!isDownloading && !isTTSDownloading && isModelReady) {
             setShowReadyMessage(true);
             const timer = setTimeout(() => {
                 setShowReadyMessage(false);
@@ -66,7 +99,7 @@ export default function HomeScreen() {
     
             return () => clearTimeout(timer);
         }
-    }, [isDownloading, isModelReady]);
+    }, [isDownloading, isTTSDownloading, isModelReady]);
 
     useEffect(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -177,16 +210,24 @@ export default function HomeScreen() {
                     return;
                 }
                 
-                const lastTenMessages = messages.slice(-10);
+                const lastTenMessages = messages.length <= 10 ? messages : messages.slice(-10);
                 if (lastTenMessages.some(msg => msg.role !== 'system')) {
                     lastTenMessages.unshift({ 
                         role: 'system', 
-                        content: `You are SAM - a sophisticated AI assistant designed for voice-based interaction. Your persona is inspired by JARVIS, the intelligent and helpful AI from the Iron Man movies. You are knowledgeable, efficient, and have a slightly formal yet friendly and helpful tone. Your primary function is to assist the user through spoken language. When responding, focus solely on the content of your spoken words. Do not include any textual descriptions of physical actions, body language, or vocal inflections. For example, avoid phrases like "(pauses slightly)", "(speaks with enthusiasm)", "(nods)", or "(looks thoughtful)". Your communication should be entirely through the words you speak. Your goal is to understand the user''s requests and provide accurate, helpful, and concise responses. You can answer questions, provide information, follow instructions, and engage in conversation in a manner consistent with the JARVIS persona. Maintain a helpful and intelligent demeanor in all your spoken interactions.` });
+                        content: `You are SAM - a friendly and sarcastic companion. This is a conversation with ${userName}` 
+                    });
                 }
-                const newConversation: Message[] = [
-                    ...lastTenMessages,
-                    { role: "user", content: newMessage, isDraft: false },
-                ];
+                
+                let newConversation = [];
+                if (lastTenMessages[lastTenMessages.length - 1].role === 'user' && lastTenMessages[lastTenMessages.length - 1].content === newMessage) {
+                    newConversation = lastTenMessages
+                } else {
+                    newConversation = 
+                        [
+                            ...lastTenMessages,
+                            { role: "user", content: newMessage, isDraft: false },
+                        ];
+                }
                 setIsGenerating(true);
                 
                 try {
@@ -357,11 +398,18 @@ export default function HomeScreen() {
                     { isDownloading && (
                         <View style={styles.downloadContainer}>
                             <Text style={styles.downloadText}>
-                                Downloading model... {progress}%
+                                Downloading AI model... {progress}%
                             </Text>
                         </View>
                     )}
-                    { !isDownloading && !isModelReady && (
+                    { isTTSDownloading && (
+                        <View style={styles.downloadContainer}>
+                            <Text style={styles.downloadText}>
+                                Downloading Text-to-Speech model... {progress}%
+                            </Text>
+                        </View>
+                    )}
+                    { !(isDownloading || isTTSDownloading) && !isModelReady && (
                         <View style={styles.downloadContainer}>
                             <Text style={styles.downloadText}>
                                 Warming up gears...
