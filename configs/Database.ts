@@ -3,8 +3,9 @@ import { type SQLiteDatabase } from 'expo-sqlite';
 import * as FileSystem from 'expo-file-system';
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
-  // Log DB path for debugging
-  // console.log(FileSystem.documentDirectory);
+  
+  const userName = 'User'; // Replace with actual user name or fetch it from your context
+
   const DATABASE_VERSION = 1;
   let result = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
 
@@ -23,13 +24,15 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
             content TEXT NOT NULL,
             isDraft INTEGER DEFAULT 0
         );
+
+        INSERT INTO messages (role, content) 
+        VALUES (
+            'system', 
+            'You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a conversation with ${userName}'
+        );
     `);
 
-    // INSERT INTO messages (role, content) 
-    //     VALUES (
-    //         'system', 
-    //         'You are SAM - a friendly and sarcastic companion. This is a conversation with ${userName}'
-    //     );
+    
   //   CREATE TABLE memories (
   //     id INTEGER PRIMARY KEY NOT NULL,
   //     content TEXT NOT NULL,

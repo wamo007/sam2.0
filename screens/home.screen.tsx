@@ -33,6 +33,7 @@ export default function HomeScreen() {
         isDownloading,
         isTTSDownloading,
         isModelReady,
+        isTTSModelReady,
         progress
     } = useModelsManager();
 
@@ -91,7 +92,7 @@ export default function HomeScreen() {
     }, []);  
 
     useEffect(() => {
-        if (!isDownloading && !isTTSDownloading && isModelReady) {
+        if (!isDownloading && !isTTSDownloading && isModelReady && isTTSModelReady) {
             setShowReadyMessage(true);
             const timer = setTimeout(() => {
                 setShowReadyMessage(false);
@@ -99,7 +100,7 @@ export default function HomeScreen() {
     
             return () => clearTimeout(timer);
         }
-    }, [isDownloading, isTTSDownloading, isModelReady]);
+    }, [isDownloading, isTTSDownloading, isModelReady, isTTSModelReady]);
 
     useEffect(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -210,13 +211,13 @@ export default function HomeScreen() {
                     return;
                 }
                 
-                const lastTenMessages = messages.length <= 10 ? messages : messages.slice(-10);
-                if (lastTenMessages.some(msg => msg.role !== 'system')) {
-                    lastTenMessages.unshift({ 
-                        role: 'system', 
-                        content: `You are SAM - a friendly and sarcastic companion. This is a conversation with ${userName}` 
-                    });
-                }
+                const lastTenMessages = messages.length <= 8 ? messages : messages.slice(-8);
+                // if (lastTenMessages.some(msg => msg.role !== 'system')) {
+                //     lastTenMessages.unshift({ 
+                //         role: 'system', 
+                //         content: `You are SAM - a friendly and sarcastic female companion. This is a conversation with ${userName}` 
+                //     });
+                // }
                 
                 let newConversation = [];
                 if (lastTenMessages[lastTenMessages.length - 1].role === 'user' && lastTenMessages[lastTenMessages.length - 1].content === newMessage) {

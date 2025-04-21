@@ -99,7 +99,8 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
             
             // Estimate TTS duration (520ms per word + 1s buffer)
             const wordCount = text.split(/\s+/).length;
-            const estimatedDuration = Math.max(2000, wordCount * 350 + 1000);
+            const totalPunctuationCount = (text.match(/[.,!?;:]/g) || []).length + (text.match(/\n/g) || []).length;
+            const estimatedDuration = Math.max(2000, wordCount * 250  + totalPunctuationCount * 200 + 1000);
             
             setTimeout(() => {
                 setTtsActive(false);

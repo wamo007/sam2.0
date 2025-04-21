@@ -14,6 +14,7 @@ export const useModelsManager = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isModelReady, setIsModelReady] = useState<boolean>(false);
+  const [isTTSModelReady, setIsTTSModelReady] = useState<boolean>(false);
   const [chosenLang, setChosenLang] = useState<string>('uk');
 
   const directoryTTSPath = `${FileSystem.documentDirectory}models/`;
@@ -58,6 +59,7 @@ export const useModelsManager = () => {
       }
       const initialFolderInfo = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}models/`);
       if (initialFolderInfo.exists && initialFolderInfo.isDirectory) {
+        setIsTTSModelReady(true);
         return true;
       }
     } else {
@@ -103,11 +105,11 @@ export const useModelsManager = () => {
         Alert.alert("Error", `Download failed: ${errorMessage}`);
       } finally {
         setIsTTSDownloading(false);
+        setIsTTSModelReady(false);
       }
     } else {
       return;
     }
-    
   };
 
   // const stopGeneration = async () => {
@@ -167,6 +169,7 @@ export const useModelsManager = () => {
     isModelReady,
     isDownloading,
     isTTSDownloading,
+    isTTSModelReady,
     progress,
     chosenLang,
     setChosenLang,
