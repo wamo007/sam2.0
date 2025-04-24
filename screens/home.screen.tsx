@@ -11,6 +11,7 @@ import { Message } from '@/configs/dbTypes';
 import { useSQLiteContext } from 'expo-sqlite';
 import * as Sharing from 'expo-sharing'
 import * as FileSystem from 'expo-file-system'
+import { UserModal } from '@/components/UserModal'
 
 export default function HomeScreen() {
 
@@ -18,89 +19,28 @@ export default function HomeScreen() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
-    const [showReadyMessage, setShowReadyMessage] = useState<boolean>(false);
     const [talkingMode, setTalkingMode] = useState<boolean>(true);
-    const [userName, setUserName] = useState<string>('User');
 
     const scrollViewRef = useRef<ScrollView>(null);
 
     const {
+        context,
+        isModelReady,
+        isDownloading,
+        isTTSDownloading,
+        isTTSModelReady,
+        progress,
         handleDownloadModel,
         checkModelExists,
         checkTTSModelExists,
         loadModel,
-        context,
-        isDownloading,
-        isTTSDownloading,
-        isModelReady,
-        isTTSModelReady,
-        progress
+        setUser,
+        setChosenLang,
+        user,
+        chosenLang
     } = useModelsManager();
 
     const db = useSQLiteContext()
-    const modelName = 'Llama-3.2-1B-Instruct-Q4_0.gguf'
-
-    useEffect(() => {
-        const checkModel = async () => {
-            if (!(await checkModelExists(modelName) && await checkTTSModelExists())) {
-                Alert.alert(
-                    "Confirm Download of the Models",
-                    `I need to download my AI and speech models to function properly.`,
-                    [
-                      { text: "OK", onPress: async () => {
-                            await handleDownloadModel(modelName) 
-                        }
-                      }
-                    ],
-                    { cancelable: false }
-                );
-            } else if (!(await checkTTSModelExists()) && (await checkModelExists(modelName))) {
-                Alert.alert(
-                    "Speech model is missing or corrupted...",
-                    `I need to re-download the speech model to talk.`,
-                    [
-                      {
-                          text: "Cancel", onPress: async () => {
-                            await loadModel(modelName) 
-                          },
-                          style: "cancel"
-                      },
-                      { text: "OK", onPress: async () => {
-                            await handleDownloadModel(modelName) 
-                        }
-                      }
-                    ],
-                    { cancelable: true }
-                );
-            } else if ((await checkTTSModelExists()) && !(await checkModelExists(modelName))) {
-                Alert.alert(
-                    "AI model is missing or corrupted...",
-                    `I need to re-download the AI model to function properly.`,
-                    [
-                        { text: "OK", onPress: async () => {
-                                await handleDownloadModel(modelName) 
-                            }
-                        }
-                    ],
-                    { cancelable: false }
-                );
-            } else {
-                await loadModel(modelName);
-            }
-        };
-        checkModel();
-    }, []);  
-
-    useEffect(() => {
-        if (!isDownloading && !isTTSDownloading && isModelReady && isTTSModelReady) {
-            setShowReadyMessage(true);
-            const timer = setTimeout(() => {
-                setShowReadyMessage(false);
-            }, 2000);
-    
-            return () => clearTimeout(timer);
-        }
-    }, [isDownloading, isTTSDownloading, isModelReady, isTTSModelReady]);
 
     useEffect(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -211,21 +151,21 @@ export default function HomeScreen() {
                     return;
                 }
                 
-                const lastTenMessages = messages.length <= 8 ? messages : messages.slice(-8);
-                // if (lastTenMessages.some(msg => msg.role !== 'system')) {
-                //     lastTenMessages.unshift({ 
+                const lastMessages = messages.length <= 16 ? messages : messages.slice(-16);
+                // if (lastMessages.some(msg => msg.role !== 'system')) {
+                //     lastMessages.unshift({ 
                 //         role: 'system', 
                 //         content: `You are SAM - a friendly and sarcastic female companion. This is a conversation with ${userName}` 
                 //     });
                 // }
                 
                 let newConversation = [];
-                if (lastTenMessages[lastTenMessages.length - 1].role === 'user' && lastTenMessages[lastTenMessages.length - 1].content === newMessage) {
-                    newConversation = lastTenMessages
+                if (lastMessages[lastMessages.length - 1].role === 'user' && lastMessages[lastMessages.length - 1].content === newMessage) {
+                    newConversation = lastMessages
                 } else {
                     newConversation = 
                         [
-                            ...lastTenMessages,
+                            ...lastMessages,
                             { role: "user", content: newMessage, isDraft: false },
                         ];
                 }
@@ -245,7 +185,7 @@ export default function HomeScreen() {
                   ];
 
                   // Create chat array with current messages plus the new user message
-                  const chat = newConversation;
+                //   const chat = newConversation;
             
                   // Append a placeholder for the assistant's response
                   setMessages((prev) => [
@@ -271,7 +211,7 @@ export default function HomeScreen() {
             
                   const result: CompletionResult = await context.completion(
                     {
-                      messages: chat,
+                      messages: newConversation,
                       n_predict: 10000,
                       stop: stopWords,
                     },
@@ -280,9 +220,16 @@ export default function HomeScreen() {
                       currentAssistantMessage += token;
 
                       const visibleContent = currentAssistantMessage
-                          .replace(/<think>.*?<\/think>/gs, "")
-                          .replace(/\*/g, "")
-                          .trim()
+                        .replace(/<think>.*?<\/think>/gs, "")
+                        .replace(/\*/g, "")
+                        .replace(/\#/g, "")
+                        .replace(/\+/g, "-")
+                        .replace(/[\u{1F300}-\u{1F9FF}]/gu, "")  // Remove emojis
+                        .replace(/[\u{1F600}-\u{1F64F}]/gu, "")  // Remove emoticons
+                        .replace(/[\u{2700}-\u{27BF}]/gu, "")    // Remove dingbats
+                        .replace(/[^\x00-\x7F]/g, "")            // Remove non-ASCII characters
+                        .replace(/\s+/g, " ")                     // Normalize whitespace
+                        .trim()
             
                       setMessages((prev) => {
                         const lastIndex = prev.length - 1;
@@ -392,41 +339,32 @@ export default function HomeScreen() {
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{
-                    flex: 1,
+                    flex: 1, 
+                    position: 'relative',
+                    maxHeight: '100%'
                 }}
+                keyboardVerticalOffset={0}
             >
+                <UserModal 
+                    handleDownloadModel={handleDownloadModel}
+                    checkModelExists={checkModelExists}
+                    checkTTSModelExists={checkTTSModelExists}
+                    loadModel={loadModel}
+                    isDownloading={isDownloading}
+                    isTTSDownloading={isTTSDownloading}
+                    isModelReady={isModelReady}
+                    isTTSModelReady={isTTSModelReady}
+                    progress={progress}
+                    setUser={setUser}
+                    setChosenLang={setChosenLang}
+                    user={user}
+                    chosenLang={chosenLang}
+                />
                 <View style={styles.mainContainer}>
-                    { isDownloading && (
-                        <View style={styles.downloadContainer}>
-                            <Text style={styles.downloadText}>
-                                Downloading AI model... {progress}%
-                            </Text>
-                        </View>
-                    )}
-                    { isTTSDownloading && (
-                        <View style={styles.downloadContainer}>
-                            <Text style={styles.downloadText}>
-                                Downloading Text-to-Speech model... {progress}%
-                            </Text>
-                        </View>
-                    )}
-                    { !(isDownloading || isTTSDownloading) && !isModelReady && (
-                        <View style={styles.downloadContainer}>
-                            <Text style={styles.downloadText}>
-                                Warming up gears...
-                            </Text>
-                        </View>
-                    )}
-                    { showReadyMessage && (
-                        <View style={styles.downloadContainer}>
-                            <Text style={styles.downloadText}>
-                                Ready to Talk!
-                            </Text>
-                        </View>
-                    )}
-                    <View style={styles.header}>
+                    
+                    {/* <View style={styles.header}>
                         <Image source={require('../assets/images/sam.png')} style={styles.headerImage} />
-                    </View>
+                    </View> */}
                 
                     <View style={styles.messagesContainer}>
                         <Text style={styles.title}>SAM</Text>
@@ -468,76 +406,75 @@ export default function HomeScreen() {
                             </ScrollView>
                         </View>
                     </View>
-                            
+                    
                 </View>
                             
-                { keyboardEnabled && !recognizing ? (
+                <View style={styles.footer}>
+                    <TouchableOpacity onPress={() => setKeyboardEnabled(true)}>
+                        <Image 
+                            style={[
+                                styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                            ]}
+                            source={require('../assets/images/keyboard.png')}
+                        />
+                    </TouchableOpacity>
+                    <TouchableOpacity>
+                        <Image 
+                            style={[
+                                styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                            ]}
+                            source={require('../assets/images/hideText.png')}
+                        />
+                    </TouchableOpacity>
+                    { !talkingMode ? (
+                        <TouchableOpacity onPress={() => setTalkingMode(true)}>
+                            <Image 
+                                style={[
+                                    styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                                ]}
+                                source={require('../assets/images/mute.png')}
+                            />
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity onPress={() => setTalkingMode(false)}>
+                            <Image 
+                                style={[
+                                    styles.microphone, {backgroundColor: '#06B6D4'}
+                                ]}
+                                source={require('../assets/images/speaker.png')}
+                            />
+                        </TouchableOpacity>
+                    )}
+                    
+                    { !recognizing ? (
+                        <TouchableOpacity 
+                            onPress={handleStart}
+                            disabled={isGenerating}
+                        >
+                            <Image 
+                                style={[
+                                    styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                                ]}
+                                source={require('../assets/images/microphone.png')}
+                            />
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity onPress={stopRecognition}>
+                            <Image 
+                                style={[
+                                    styles.microphone, {backgroundColor: '#06B6D4'}
+                                ]}
+                                source={require('../assets/images/microphone.png')}
+                            />
+                        </TouchableOpacity>
+                    )}
+                </View>
+                { keyboardEnabled && !recognizing && (
                     <MessageInput 
                         onMicPress={handleStart}
                         onKeyboardHide={() => setKeyboardEnabled(false)}
                         onShouldSend={appendTextMessage}
                     />
-                ) : (
-                    <View style={styles.footer}>
-                        <TouchableOpacity onPress={() => setKeyboardEnabled(true)}>
-                            <Image 
-                                style={[
-                                    styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
-                                ]}
-                                source={require('../assets/images/keyboard.png')}
-                            />
-                        </TouchableOpacity>
-                        <TouchableOpacity>
-                            <Image 
-                                style={[
-                                    styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
-                                ]}
-                                source={require('../assets/images/sam.png')}
-                            />
-                        </TouchableOpacity>
-                        { !talkingMode ? (
-                            <TouchableOpacity onPress={() => setTalkingMode(true)}>
-                                <Image 
-                                    style={[
-                                        styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
-                                    ]}
-                                    source={require('../assets/images/speaker.png')}
-                                />
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity onPress={() => setTalkingMode(false)}>
-                                <Image 
-                                    style={[
-                                        styles.microphone, {backgroundColor: '#06B6D4'}
-                                    ]}
-                                    source={require('../assets/images/speaker.png')}
-                                />
-                            </TouchableOpacity>
-                        )}
-                        
-                        { !recognizing ? (
-                            <TouchableOpacity 
-                                onPress={handleStart}
-                                disabled={isGenerating}
-                            >
-                                <Image 
-                                    style={[
-                                        styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
-                                    ]}
-                                    source={require('../assets/images/microphone.png')}
-                                />
-                            </TouchableOpacity>
-                        ) : (
-                            <TouchableOpacity onPress={stopRecognition}>
-                                <Image 
-                                    style={[
-                                        styles.microphone, {backgroundColor: '#06B6D4'}
-                                    ]}
-                                    source={require('../assets/images/microphone.png')}
-                                />
-                            </TouchableOpacity>
-                        )}
-                    </View>  
                 )}
             </KeyboardAvoidingView>
         </LinearGradient>
@@ -556,7 +493,8 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'column',
         marginTop: scale(30),
-        
+        position: 'relative',
+        maxHeight: '100%'
     },
     header: {
         flexDirection: 'row',
@@ -569,6 +507,7 @@ const styles = StyleSheet.create({
     messagesContainer: {
         flex: 1,
         marginTop: scale(5),
+        position: 'relative',
     },
     title: {
         fontSize: scale(20),
@@ -582,6 +521,7 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(30, 41, 59, 0.8)',
         borderRadius: scale(8),
         padding: scale(4),
+        maxHeight: '100%'
     },
     scrollView: {
         margin: scale(5),
@@ -621,7 +561,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginVertical: scale(10),
+        marginTop: scale(10),
     },
     microphone: {
         borderRadius: scale(8),
@@ -636,26 +576,5 @@ const styles = StyleSheet.create({
     loadingText: {
         color: '#F9FAFB',
         fontSize: scale(14),
-    },
-    downloadContainer: {
-        position: 'absolute',
-        bottom: scale(80),
-        alignSelf: 'center',
-        backgroundColor: '#07002e',
-        padding: scale(10),
-        borderRadius: scale(5),
-        elevation: 1, // Android shadow
-        shadowColor: '#000', // iOS shadow
-        shadowOffset: {
-            width: 0,
-            height: 1,
-        },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.00,
-        zIndex: 1000,
-    },
-    downloadText: {
-        color: '#fff',
-        fontSize: scale(12),
     },
 });

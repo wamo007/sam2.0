@@ -4,8 +4,6 @@ import * as FileSystem from 'expo-file-system';
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   
-  const userName = 'User'; // Replace with actual user name or fetch it from your context
-
   const DATABASE_VERSION = 1;
   let result = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
 
@@ -14,42 +12,20 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   if (currentDbVersion >= DATABASE_VERSION) {
     return;
   }
-    if (currentDbVersion === 0) {
-        const result = await db.execAsync(`
-        PRAGMA journal_mode = 'wal';
+  if (currentDbVersion === 0) {
+      const result = await db.execAsync(`
+      PRAGMA journal_mode = 'wal';
 
-        CREATE TABLE messages (
-            id INTEGER PRIMARY KEY NOT NULL, 
-            role TEXT NOT NULL,
-            content TEXT NOT NULL,
-            isDraft INTEGER DEFAULT 0
-        );
+      CREATE TABLE messages (
+          id INTEGER PRIMARY KEY NOT NULL, 
+          role TEXT NOT NULL,
+          content TEXT NOT NULL,
+          isDraft INTEGER DEFAULT 0
+      );
+  `);
 
-        INSERT INTO messages (role, content) 
-        VALUES (
-            'system', 
-            'You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a conversation with ${userName}'
-        );
-    `);
-
-    
-  //   CREATE TABLE memories (
-  //     id INTEGER PRIMARY KEY NOT NULL,
-  //     content TEXT NOT NULL,
-  //     embedding TEXT NOT NULL,
-  //     importance REAL NOT NULL DEFAULT 0.5,
-  //     timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
-  // );
-
-  // CREATE INDEX idx_memories_timestamp ON memories(timestamp);
     currentDbVersion = 1;
   }
-  // if (currentDbVersion === 1) {
-  //   Add more migrations
-  // }
-
-  // You are SAM, an advanced AI assistant. This is a conversation between user and assistant. Respond with technical precision, dry wit, and impeccable British diction. Prioritize efficiency while maintaining an air of sophisticated charm.
-
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
 }
 

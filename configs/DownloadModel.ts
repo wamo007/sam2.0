@@ -3,9 +3,17 @@ import RNFS from "react-native-fs";
 export const downloadModel = async (
   // modelName: string,
   // modelUrl: string,
+  language: string,
   onProgress: (progress: number) => void
 ): Promise<string> => {
   
+  let model;
+  if (language === 'ru') {
+    model = 'Vikhr-Qwen-2.5-1.5b-Instruct-Q3_K_S.gguf';
+  } else if (language === 'uk' || language === 'us') {
+    model = 'Llama-3.2-1B-Instruct-Q4_0.gguf';
+  }
+
   const destPath = `${RNFS.DocumentDirectoryPath}/Llama-3.2-1B-Instruct-Q4_0.gguf`;
   try {
     const fileExists = await RNFS.exists(destPath);
@@ -19,7 +27,7 @@ export const downloadModel = async (
     // console.log("modelUrl : ", modelUrl)
 
     const downloadResult = await RNFS.downloadFile({
-      fromUrl: 'https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_0.gguf',
+      fromUrl: `https://huggingface.co/shamil010/mymodel/resolve/main/${model}`,
       toFile: destPath,
       progressDivider: 5,
       begin: (res) => {

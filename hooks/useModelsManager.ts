@@ -4,6 +4,8 @@ import { downloadModel } from "@/configs/DownloadModel";
 import { Alert, Platform } from "react-native";
 import { useState } from "react";
 import { downloadTTSModel } from "@/configs/DownloadTTSModel";
+import { addMessage } from "@/configs/Database";
+import { useSQLiteContext } from "expo-sqlite";
 
 export const useModelsManager = () => {
 
@@ -16,6 +18,9 @@ export const useModelsManager = () => {
   const [isModelReady, setIsModelReady] = useState<boolean>(false);
   const [isTTSModelReady, setIsTTSModelReady] = useState<boolean>(false);
   const [chosenLang, setChosenLang] = useState<string>('uk');
+  const [user, setUser] = useState<string>('User');
+
+  const modelName = 'Llama-3.2-1B-Instruct-Q4_0.gguf'
 
   const directoryTTSPath = `${FileSystem.documentDirectory}models/`;
   const findOnnxFile = async (directoryTTSPath: string): Promise<string | null> => {
@@ -38,10 +43,10 @@ export const useModelsManager = () => {
     }
   };
 
-  const checkModelExists = async (modelName: string) => {
+  const checkModelExists = async () => {
     try {
       const initialFileInfo = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}${modelName}`);
-      if (initialFileInfo.exists && initialFileInfo.size > 770000000) {
+      if (initialFileInfo.exists && initialFileInfo.size > 500000000) {
         // console.log("File exists:", true);
         return true;
       }
@@ -67,24 +72,24 @@ export const useModelsManager = () => {
     }
   };
 
-  const handleDownloadModel = async (modelName: string) => {
+  const handleDownloadModel = async () => {
 
     setProgress(0);
 
-    if (await checkModelExists(modelName)) {
-      const modelExists = await loadModel(modelName);
+    if (await checkModelExists()) {
+      const modelExists = await loadModel();
       if (modelExists) {
         return;
       }
     } else {
       setIsDownloading(true);
       try {
-        await downloadModel((progress) =>
+        await downloadModel(chosenLang, (progress) =>
           setProgress(progress)
         );
     
         // After downloading, load the model
-        await loadModel(modelName);
+        await loadModel();
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : "Unknown error";
@@ -136,7 +141,7 @@ export const useModelsManager = () => {
   //   }
   // };
 
-  const loadModel = async (modelName: string): Promise<boolean> => {
+  const loadModel = async (): Promise<boolean> => {
     try {
       const destPath = `${FileSystem.documentDirectory}${modelName}`;
       // console.log("destPath : ", destPath);
@@ -172,11 +177,13 @@ export const useModelsManager = () => {
     isTTSModelReady,
     progress,
     chosenLang,
+    user,
     setChosenLang,
     checkModelExists,
     checkTTSModelExists,
     handleDownloadModel,
     loadModel,
     setIsGenerating,
+    setUser
   };
 };

@@ -42,7 +42,6 @@
     "react-native-screens": "~4.4.0",
     "react-native-sherpa-onnx-offline-tts": "^0.2.2",
     "react-native-size-matters": "^0.4.2",
-    "react-native-vosk": "^0.3.3",
     "react-native-zip-archive": "^7.0.1"
   },
   "devDependencies": {

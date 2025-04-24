@@ -5,6 +5,7 @@ import {
 } from "expo-speech-recognition";
 import * as Device from 'expo-device';
 import TTSManager from 'react-native-sherpa-onnx-offline-tts';
+import { useModelsManager } from './useModelsManager';
 
 type SpeechRecognitionProps = {
     onStart?: () => void;
@@ -14,6 +15,8 @@ type SpeechRecognitionProps = {
     onTTSComplete?: () => void;
 };
 
+type SupportedLanguages = 'us' | 'uk' | 'ru' | 'default';
+
 export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
     const [recognizing, setRecognizing] = useState(false);
     const [ttsActive, setTtsActive] = useState(false);
@@ -21,6 +24,16 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
     const [transcriptBuffer, setTranscriptBuffer] = useState("");
     const [lastProcessedTranscript, setLastProcessedTranscript] = useState("");
 
+    const { chosenLang } = useModelsManager();
+
+    const langMap: Record<SupportedLanguages, string> = {
+        'us': 'en-US',
+        'uk': 'en-GB',
+        'ru': 'ru-RU',
+        'default': 'en-GB'
+    }
+
+    const lang = langMap[chosenLang as SupportedLanguages] ?? langMap.default
 
     const startRecognition = useCallback(async () => {
         const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
@@ -29,19 +42,13 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
             return false;
         }
 
-        // Check if the device is running Android 13 or higher
-        const isAndroid13OrHigher =
-            Device.osName === "Android" &&
-            !!Device.osVersion &&
-            parseInt(Device.osVersion.split(".")[0]) >= 13;
-
         // Start speech recognition
         ExpoSpeechRecognitionModule.start({
-            lang: "en-US",
+            lang: lang,
             interimResults: true,
             continuous: false,
             requiresOnDeviceRecognition: false,
-            addsPunctuation: isAndroid13OrHigher,
+            addsPunctuation: true,
             androidIntentOptions: {
                 EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000,
                 EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 2500,
@@ -92,15 +99,21 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
     });
 
     const speak = useCallback(async (text: string) => {
+
+        let speed = 0.8;
+        if (chosenLang === "ru") {
+            speed = 1.1;
+        }
+
         try {
             setTtsActive(true);
-            TTSManager.initialize("en_GB-alba-medium.onnx");
-            await TTSManager.generateAndPlay(text, 0, 0.8);
+            TTSManager.initialize("medium.onnx");
+            await TTSManager.generateAndPlay(text, 0, speed);
             
             // Estimate TTS duration (520ms per word + 1s buffer)
             const wordCount = text.split(/\s+/).length;
             const totalPunctuationCount = (text.match(/[.,!?;:]/g) || []).length + (text.match(/\n/g) || []).length;
-            const estimatedDuration = Math.max(2000, wordCount * 250  + totalPunctuationCount * 200 + 1000);
+            const estimatedDuration = Math.max(2000, wordCount * 255  + totalPunctuationCount * 195 + 1000);
             
             setTimeout(() => {
                 setTtsActive(false);
