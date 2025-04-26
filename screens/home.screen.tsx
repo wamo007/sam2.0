@@ -12,6 +12,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import * as Sharing from 'expo-sharing'
 import * as FileSystem from 'expo-file-system'
 import { UserModal } from '@/components/UserModal'
+import { ChatView } from '@/components/ChatView'
 
 export default function HomeScreen() {
 
@@ -20,8 +21,6 @@ export default function HomeScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [talkingMode, setTalkingMode] = useState<boolean>(true);
-
-    const scrollViewRef = useRef<ScrollView>(null);
 
     const {
         context,
@@ -41,10 +40,6 @@ export default function HomeScreen() {
     } = useModelsManager();
 
     const db = useSQLiteContext()
-
-    useEffect(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, [messages]);
 
     useEffect(() => {
         const fetchMessages = async () => {
@@ -170,7 +165,7 @@ export default function HomeScreen() {
                         ];
                 }
                 setIsGenerating(true);
-                
+
                 try {
                   const stopWords = [
                     "</s>",
@@ -246,6 +241,13 @@ export default function HomeScreen() {
                   const finalContent = currentAssistantMessage
                     .replace(/<think>.*?<\/think>/gs, "")
                     .replace(/\*/g, "")
+                    .replace(/\#/g, "")
+                    .replace(/\+/g, "-")
+                    .replace(/[\u{1F300}-\u{1F9FF}]/gu, "")  // Remove emojis
+                    .replace(/[\u{1F600}-\u{1F64F}]/gu, "")  // Remove emoticons
+                    .replace(/[\u{2700}-\u{27BF}]/gu, "")    // Remove dingbats
+                    .replace(/[^\x00-\x7F]/g, "")            // Remove non-ASCII characters
+                    .replace(/\s+/g, " ") 
                     .trim();
                   if (talkingMode) {
                     try {
@@ -278,6 +280,10 @@ export default function HomeScreen() {
 
                 } finally {
                   setIsGenerating(false);
+                  if (talkingMode) {
+                    setTtsActive(false);
+                    handleStart();
+                  }
                 }
             } catch (error) {
                 console.error("Error processing query:", error);
@@ -290,8 +296,8 @@ export default function HomeScreen() {
     }
 
     const exportDB = async () => {
-        await speak('Testing voice');
-        // await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
+        // await speak('Testing voice');
+        await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
     }
 
     const handleStart = async () => {
@@ -360,54 +366,10 @@ export default function HomeScreen() {
                     user={user}
                     chosenLang={chosenLang}
                 />
-                <View style={styles.mainContainer}>
-                    
-                    {/* <View style={styles.header}>
+                  {/* <View style={styles.header}>
                         <Image source={require('../assets/images/sam.png')} style={styles.headerImage} />
                     </View> */}
-                
-                    <View style={styles.messagesContainer}>
-                        <Text style={styles.title}>SAM</Text>
-                        <View style={styles.chatBox}>
-                            <ScrollView
-                                ref={scrollViewRef}
-                                bounces={false}
-                                style={styles.scrollView}
-                                showsVerticalScrollIndicator={false}
-                            >
-                                { isLoading ? (
-                                    <View style={styles.loadingContainer}>
-                                        <Text style={styles.loadingText}>Loading messages...</Text>
-                                    </View>
-                                ) : messages.map((message, index:number) => {
-                                        if (message.role === 'assistant') {
-                                            return (
-                                            <View key={index} style={styles.assistantMessageContainer}>
-                                                <View style={styles.assistantMessage}>
-                                                    <Text style={styles.assistantMessageText}>
-                                                        {message.content}
-                                                    </Text>
-                                                </View>
-                                            </View>
-                                            )
-                                        } else if (message.role === 'user') {
-                                            return (
-                                            <View key={index} style={styles.userMessageContainer}>
-                                                <View style={styles.userMessage}>
-                                                <Text style={styles.userMessageText}>
-                                                    {message.content}
-                                                </Text>
-                                                </View>
-                                            </View>
-                                            )
-                                        }
-                                    })
-                                }
-                            </ScrollView>
-                        </View>
-                    </View>
-                    
-                </View>
+                <ChatView messages={messages} isLoading={isLoading} />
                             
                 <View style={styles.footer}>
                     <TouchableOpacity onPress={() => setKeyboardEnabled(true)}>
@@ -418,14 +380,14 @@ export default function HomeScreen() {
                             source={require('../assets/images/keyboard.png')}
                         />
                     </TouchableOpacity>
-                    <TouchableOpacity>
+                    {/* <TouchableOpacity>
                         <Image 
                             style={[
                                 styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
                             ]}
                             source={require('../assets/images/hideText.png')}
                         />
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                     { !talkingMode ? (
                         <TouchableOpacity onPress={() => setTalkingMode(true)}>
                             <Image 
@@ -469,13 +431,11 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                     )}
                 </View>
-                { keyboardEnabled && !recognizing && (
-                    <MessageInput 
-                        onMicPress={handleStart}
-                        onKeyboardHide={() => setKeyboardEnabled(false)}
-                        onShouldSend={appendTextMessage}
-                    />
-                )}
+                <MessageInput 
+                    onMicPress={handleStart}
+                    onKeyboardHide={() => setKeyboardEnabled(false)}
+                    onShouldSend={appendTextMessage}
+                />
             </KeyboardAvoidingView>
         </LinearGradient>
     )
