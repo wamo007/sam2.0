@@ -61,10 +61,9 @@ export default function HomeScreen() {
 
     const {
         recognizing,
-        ttsActive,
+        speak,
         startRecognition,
         stopRecognition,
-        speak
     } = useVoiceInteraction({
         onStart: () => {},
         onEnd: async (finalTranscript) => {
@@ -191,6 +190,7 @@ export default function HomeScreen() {
                       isDraft: true,
                     },
                   ]);
+                  
                   let currentAssistantMessage = "";
             
                   interface CompletionData {
@@ -210,6 +210,7 @@ export default function HomeScreen() {
                       n_predict: 10000,
                       stop: stopWords,
                     },
+                    
                     async (data: CompletionData) => {
                       const token = data.token;
                       currentAssistantMessage += token;
@@ -225,7 +226,7 @@ export default function HomeScreen() {
                         .replace(/[^\x00-\x7F]/g, "")            // Remove non-ASCII characters
                         .replace(/\s+/g, " ")                     // Normalize whitespace
                         .trim()
-            
+
                       setMessages((prev) => {
                         const lastIndex = prev.length - 1;
                         const updated = [...prev];
@@ -233,11 +234,10 @@ export default function HomeScreen() {
                         updated[lastIndex].isDraft = false; // Keep as draft until complete
                         return updated;
                       });
-
                     }
                   );
 
-                //   After completion is done, save final message
+                  // After completion is done, save final message
                   const finalContent = currentAssistantMessage
                     .replace(/<think>.*?<\/think>/gs, "")
                     .replace(/\*/g, "")
@@ -249,15 +249,17 @@ export default function HomeScreen() {
                     .replace(/[^\x00-\x7F]/g, "")            // Remove non-ASCII characters
                     .replace(/\s+/g, " ") 
                     .trim();
+                  
                   if (talkingMode) {
                     try {
                         await speak(finalContent);
                     } catch (error) {
-                        console.error("Error in speech sequence:", error);
+                        console.error("Error in speech sequence: ", error);
                         // Optionally disable talking mode if there's an error
                         setTalkingMode(false);
                     }
                   }
+
                   setMessages((prev) => {
                     const lastIndex = prev.length - 1;
                     const updated = [...prev];
@@ -280,10 +282,6 @@ export default function HomeScreen() {
 
                 } finally {
                   setIsGenerating(false);
-                  if (talkingMode) {
-                    setTtsActive(false);
-                    handleStart();
-                  }
                 }
             } catch (error) {
                 console.error("Error processing query:", error);
