@@ -13,6 +13,8 @@ import * as Sharing from 'expo-sharing'
 import * as FileSystem from 'expo-file-system'
 import { UserModal } from '@/components/UserModal'
 import { ChatView } from '@/components/ChatView'
+import { NoChatView } from '@/components/NoChatView'
+import { AntDesign } from '@expo/vector-icons'
 
 export default function HomeScreen() {
 
@@ -21,6 +23,7 @@ export default function HomeScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [talkingMode, setTalkingMode] = useState<boolean>(true);
+    const [openSettings, setOpenSettings] = useState<boolean>(false);
 
     const {
         context,
@@ -64,6 +67,7 @@ export default function HomeScreen() {
         speak,
         startRecognition,
         stopRecognition,
+        ttsActive
     } = useVoiceInteraction({
         onStart: () => {},
         onEnd: async (finalTranscript) => {
@@ -127,7 +131,6 @@ export default function HomeScreen() {
             await addMessage(db, {
                 role: 'user',
                 content: newMessage,
-                isDraft: false,
             });
 
             setMessages(prev => prev.filter(msg => 
@@ -145,13 +148,7 @@ export default function HomeScreen() {
                     return;
                 }
                 
-                const lastMessages = messages.length <= 16 ? messages : messages.slice(-16);
-                // if (lastMessages.some(msg => msg.role !== 'system')) {
-                //     lastMessages.unshift({ 
-                //         role: 'system', 
-                //         content: `You are SAM - a friendly and sarcastic female companion. This is a conversation with ${userName}` 
-                //     });
-                // }
+                const lastMessages = messages.length <= 10 ? messages : messages.slice(-10);
                 
                 let newConversation = [];
                 if (lastMessages[lastMessages.length - 1].role === 'user' && lastMessages[lastMessages.length - 1].content === newMessage) {
@@ -179,7 +176,17 @@ export default function HomeScreen() {
                   ];
 
                   // Create chat array with current messages plus the new user message
-                //   const chat = newConversation;
+                  // const chat = newConversation;
+                  if (newConversation.some(msg => msg.role !== 'system')) {
+                    newConversation = [
+                        ...newConversation.slice(0, -1),
+                        { 
+                            role: 'system', 
+                            content: `You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a dialogue with ${user}.` 
+                        },
+                        newConversation[newConversation.length - 1]
+                    ];
+                  }
             
                   // Append a placeholder for the assistant's response
                   setMessages((prev) => [
@@ -207,7 +214,9 @@ export default function HomeScreen() {
                   const result: CompletionResult = await context.completion(
                     {
                       messages: newConversation,
-                      n_predict: 10000,
+                      n_predict: 90,
+                      temperature: 0.5,
+                      top_p: 0.9,
                       stop: stopWords,
                     },
                     
@@ -255,7 +264,6 @@ export default function HomeScreen() {
                         await speak(finalContent);
                     } catch (error) {
                         console.error("Error in speech sequence: ", error);
-                        // Optionally disable talking mode if there's an error
                         setTalkingMode(false);
                     }
                   }
@@ -271,7 +279,6 @@ export default function HomeScreen() {
                   await addMessage(db, {
                     role: 'assistant',
                     content: finalContent,
-                    isDraft: false
                   });
             
                 } catch (error) {
@@ -294,7 +301,6 @@ export default function HomeScreen() {
     }
 
     const exportDB = async () => {
-        // await speak('Testing voice');
         await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
     }
 
@@ -347,7 +353,6 @@ export default function HomeScreen() {
                     position: 'relative',
                     maxHeight: '100%'
                 }}
-                keyboardVerticalOffset={0}
             >
                 <UserModal 
                     handleDownloadModel={handleDownloadModel}
@@ -364,28 +369,32 @@ export default function HomeScreen() {
                     user={user}
                     chosenLang={chosenLang}
                 />
-                  {/* <View style={styles.header}>
-                        <Image source={require('../assets/images/sam.png')} style={styles.headerImage} />
-                    </View> */}
-                <ChatView messages={messages} isLoading={isLoading} />
+                <View style={styles.mainContainer}>
+                    <View style={styles.messagesContainer}>
+                        <View style={styles.navBar}>
+                            <Text style={styles.title}>SAM</Text>
+                            
+                            { openSettings 
+                            ? <AntDesign name="menuunfold" 
+                                size={24} color="rgba(255, 255, 255, 0.7)" 
+                                onPress={() => setOpenSettings(false)} 
+                              />
+                            : <AntDesign name="menufold" 
+                                size={24} color="rgba(255, 255, 255, 0.7)" 
+                                onPress={() => setOpenSettings(true)} 
+                              />
+                            }
+                            
+                        </View>
+                        
+                        { keyboardEnabled 
+                            ? <ChatView messages={messages} isLoading={isLoading} /> 
+                            : <NoChatView ttsActive={ttsActive} />
+                        }
+                    </View>
+                </View>
                             
                 <View style={styles.footer}>
-                    <TouchableOpacity onPress={() => setKeyboardEnabled(true)}>
-                        <Image 
-                            style={[
-                                styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
-                            ]}
-                            source={require('../assets/images/keyboard.png')}
-                        />
-                    </TouchableOpacity>
-                    {/* <TouchableOpacity>
-                        <Image 
-                            style={[
-                                styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
-                            ]}
-                            source={require('../assets/images/hideText.png')}
-                        />
-                    </TouchableOpacity> */}
                     { !talkingMode ? (
                         <TouchableOpacity onPress={() => setTalkingMode(true)}>
                             <Image 
@@ -405,7 +414,25 @@ export default function HomeScreen() {
                             />
                         </TouchableOpacity>
                     )}
-                    
+                    { keyboardEnabled ? (
+                        <TouchableOpacity onPress={() => setKeyboardEnabled(false)}>
+                            <Image 
+                                style={[
+                                    styles.microphone, {backgroundColor: '#06B6D4'}
+                                ]}
+                                source={require('../assets/images/keyboard.png')}
+                            />
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity onPress={() => setKeyboardEnabled(true)}>
+                            <Image 
+                                style={[
+                                    styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                                ]}
+                                source={require('../assets/images/keyboard.png')}
+                            />
+                        </TouchableOpacity>
+                    )}
                     { !recognizing ? (
                         <TouchableOpacity 
                             onPress={handleStart}
@@ -429,11 +456,11 @@ export default function HomeScreen() {
                         </TouchableOpacity>
                     )}
                 </View>
-                <MessageInput 
-                    onMicPress={handleStart}
-                    onKeyboardHide={() => setKeyboardEnabled(false)}
-                    onShouldSend={appendTextMessage}
-                />
+                { keyboardEnabled &&
+                    <MessageInput
+                        onShouldSend={appendTextMessage}
+                    />
+                }
             </KeyboardAvoidingView>
         </LinearGradient>
     )
@@ -454,25 +481,22 @@ const styles = StyleSheet.create({
         position: 'relative',
         maxHeight: '100%'
     },
-    header: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-    },
-    headerImage: {
-        height: scale(150),
-        width: scale(150),
-    },
     messagesContainer: {
         flex: 1,
         marginTop: scale(5),
         position: 'relative',
     },
+    navBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignContent: 'center',
+        marginHorizontal: scale(1),
+        marginBottom: scale(4),
+    },
     title: {
         fontSize: scale(20),
         color: 'rgba(255, 255, 255, 0.7)',
         fontFamily: 'OrbitronBold',
-        marginLeft: scale(1),
-        marginBottom: scale(4),
     },
     chatBox: {
         flex: 1,
@@ -519,7 +543,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginTop: scale(10),
+        marginVertical: scale(10),
     },
     microphone: {
         borderRadius: scale(8),

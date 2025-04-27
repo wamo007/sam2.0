@@ -17,70 +17,46 @@ export const ChatView = ({ messages, isLoading }: ChatViewProps) => {
     }, [messages]);
 
     return (
-        <View style={styles.mainContainer}>
-            <View style={styles.messagesContainer}>
-                <Text style={styles.title}>SAM</Text>
-                <View style={styles.chatBox}>
-                    <ScrollView
-                        ref={scrollViewRef}
-                        bounces={false}
-                        style={styles.scrollView}
-                        showsVerticalScrollIndicator={false}
-                    >
-                        {isLoading ? (
-                            <View style={styles.loadingContainer}>
-                                <Text style={styles.loadingText}>Loading messages...</Text>
+        <View style={styles.chatBox}>
+            <ScrollView
+                ref={scrollViewRef}
+                bounces={false}
+                style={styles.scrollView}
+                showsVerticalScrollIndicator={false}
+            >
+                {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                        <Text style={styles.loadingText}>Loading messages...</Text>
+                    </View>
+                ) : messages.map((message, index: number) => {
+                    if (message.role === 'assistant') {
+                        return (
+                            <View key={index} style={styles.assistantMessageContainer}>
+                                <View style={styles.assistantMessage}>
+                                    <Text style={styles.assistantMessageText}>
+                                        {message.content}
+                                    </Text>
+                                </View>
                             </View>
-                        ) : messages.map((message, index: number) => {
-                            if (message.role === 'assistant') {
-                                return (
-                                    <View key={index} style={styles.assistantMessageContainer}>
-                                        <View style={styles.assistantMessage}>
-                                            <Text style={styles.assistantMessageText}>
-                                                {message.content}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                )
-                            } else if (message.role === 'user') {
-                                return (
-                                    <View key={index} style={styles.userMessageContainer}>
-                                        <View style={styles.userMessage}>
-                                            <Text style={styles.userMessageText}>
-                                                {message.content}
-                                            </Text>
-                                        </View>
-                                    </View>
-                                )
-                            }
-                        })}
-                    </ScrollView>
-                </View>
-            </View>
+                        )
+                    } else if (message.role === 'user') {
+                        return (
+                            <View key={index} style={styles.userMessageContainer}>
+                                <View style={styles.userMessage}>
+                                    <Text style={styles.userMessageText}>
+                                        {message.content}
+                                    </Text>
+                                </View>
+                            </View>
+                        )
+                    }
+                })}
+            </ScrollView>
         </View>
     );
 };
 
 const styles = StyleSheet.create({
-    mainContainer: {
-        flex: 1,
-        flexDirection: 'column',
-        marginTop: scale(30),
-        position: 'relative',
-        maxHeight: '100%'
-    },
-    messagesContainer: {
-        flex: 1,
-        marginTop: scale(5),
-        position: 'relative',
-    },
-    title: {
-        fontSize: scale(20),
-        color: 'rgba(255, 255, 255, 0.7)',
-        fontFamily: 'OrbitronBold',
-        marginLeft: scale(1),
-        marginBottom: scale(4),
-    },
     chatBox: {
         flex: 1,
         backgroundColor: 'rgba(30, 41, 59, 0.8)',

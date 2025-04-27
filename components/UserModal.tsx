@@ -1,16 +1,8 @@
 import { addMessage } from '@/configs/Database';
-import { useModelsManager } from '@/hooks/useModelsManager';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, ModalProps, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { scale } from 'react-native-size-matters';
-
-// type UserInfoProps = ModalProps & {
-//     isOpen: boolean;
-//     onOpenChange: (open: boolean) => void;
-//     isSetup: boolean;
-//     onSetupChange: (setup: boolean) => void;
-// }
 
 interface UserModalProps {
   handleDownloadModel: () => Promise<void>;
@@ -96,7 +88,7 @@ export const UserModal = ({
         setLanguage(language);
         await addMessage(db, {
             role: 'system',
-            content: `You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a conversation with ${user}`
+            content: `You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a dialogue with ${userName}.`
         });
         setAlertHeader(`Hi, ${userName}!`);
         setIsSetup(false);
@@ -110,7 +102,6 @@ export const UserModal = ({
     const content = isSetup ? (
         <View style={styles.modalContainer}>
             <TextInput
-                autoFocus
                 ref={inputRef}
                 placeholder={user}
                 placeholderTextColor={'rgba(255, 255, 255, 0.5)'}

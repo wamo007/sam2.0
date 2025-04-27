@@ -1,5 +1,4 @@
 import AntDesign from '@expo/vector-icons/AntDesign';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
 import { View, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import {
@@ -15,13 +14,11 @@ import { scale } from 'react-native-size-matters'
 // };
 
 type MessageInputProps = {
-    onMicPress: () => void;
-    onKeyboardHide: () => void;
     onShouldSend: (message: string) => void;
 };
 
 // const MessageInput = ({ onShouldSend }: Props) => {
-const MessageInput = ({ onMicPress, onKeyboardHide, onShouldSend }: MessageInputProps ) => {
+const MessageInput = ({ onShouldSend }: MessageInputProps ) => {
   const [message, setMessage] = useState('');
   const { bottom } = useSafeAreaInsets();
   const expanded = useSharedValue(0);
@@ -46,7 +43,6 @@ const MessageInput = ({ onMicPress, onKeyboardHide, onShouldSend }: MessageInput
       <View style={styles.row}>
 
         <TextInput
-          autoFocus
           ref={inputRef}
           placeholder="Message"
           placeholderTextColor={'rgba(255, 255, 255, 0.5)'}
@@ -56,21 +52,12 @@ const MessageInput = ({ onMicPress, onKeyboardHide, onShouldSend }: MessageInput
           value={message}
           multiline
         />
-        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: scale(12) }}>
+        <TouchableOpacity>
             <AntDesign 
                 onPress={onSend} 
                 name="arrowup" 
                 size={scale(22)} 
                 color={'rgb(5, 153, 179)'} 
-            />
-            <FontAwesome6 
-                onPress={() => {
-                    onMicPress();
-                    onKeyboardHide();
-                }} 
-                name="microphone-lines" 
-                size={scale(21)} 
-                color="rgb(5, 153, 179)" 
             />
         </TouchableOpacity>
 
@@ -83,7 +70,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: scale(10),
     marginBottom: scale(5),
   },
   messageInput: {

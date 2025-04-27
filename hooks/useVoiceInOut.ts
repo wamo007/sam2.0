@@ -106,14 +106,14 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
         }
 
         try {
-            setTtsActive(true);
             TTSManager.initialize("medium.onnx");
             await TTSManager.generateAndPlay(text, 0, speed);
-            
+            setTtsActive(true);
+
             // Estimate TTS duration (520ms per word + 1s buffer)
             const wordCount = text.split(/\s+/).length;
             const totalPunctuationCount = (text.match(/[.,!?;:]/g) || []).length + (text.match(/\n/g) || []).length;
-            const estimatedDuration = Math.max(2000, wordCount * 255  + totalPunctuationCount * 195 + 1000);
+            const estimatedDuration = Math.max(2000, wordCount * 255  + totalPunctuationCount * 200 + 1000);
             
             setTimeout(() => {
                 setTtsActive(false);
