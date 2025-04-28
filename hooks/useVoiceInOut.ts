@@ -15,8 +15,6 @@ type SpeechRecognitionProps = {
     onTTSComplete?: () => void;
 };
 
-type SupportedLanguages = 'us' | 'uk' | 'ru' | 'default';
-
 export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
     const [recognizing, setRecognizing] = useState(false);
     const [ttsActive, setTtsActive] = useState(false);
@@ -24,16 +22,7 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
     const [transcriptBuffer, setTranscriptBuffer] = useState("");
     const [lastProcessedTranscript, setLastProcessedTranscript] = useState("");
 
-    const { chosenLang } = useModelsManager();
-
-    const langMap: Record<SupportedLanguages, string> = {
-        'us': 'en-US',
-        'uk': 'en-GB',
-        'ru': 'ru-RU',
-        'default': 'en-GB'
-    }
-
-    const lang = langMap[chosenLang as SupportedLanguages] ?? langMap.default
+    const { userAccent } = useModelsManager();
 
     const startRecognition = useCallback(async () => {
         const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
@@ -44,7 +33,7 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
 
         // Start speech recognition
         ExpoSpeechRecognitionModule.start({
-            lang: lang,
+            lang: userAccent,
             interimResults: true,
             continuous: false,
             requiresOnDeviceRecognition: false,
@@ -101,9 +90,9 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
     const speak = useCallback(async (text: string) => {
 
         let speed = 0.8;
-        if (chosenLang === "ru") {
-            speed = 1.1;
-        }
+        // if (userAccent === "ru-RU") {
+        //     speed = 1.1;
+        // }
 
         try {
             TTSManager.initialize("medium.onnx");

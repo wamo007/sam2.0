@@ -1,8 +1,10 @@
 import { addMessage } from '@/configs/Database';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Image, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { scale } from 'react-native-size-matters';
+import { Dropdown } from 'react-native-element-dropdown';
+import { AntDesign } from '@expo/vector-icons';
 
 interface UserModalProps {
   handleDownloadModel: () => Promise<void>;
@@ -15,9 +17,17 @@ interface UserModalProps {
   isTTSModelReady: boolean;
   progress: number;
   setUser: (user: string) => void;
-  setChosenLang: (lang: string) => void;
+  setChosenLang: (chosenLang: string) => void;
+  setCharacter: (character: string) => void;
+  setCharacterAccent: (characterAccent: string) => void;
+  setUserAccent: (userAccent: string) => void;
+  setOpenSettings: (openSettings: boolean) => void;
   user: string;
   chosenLang: string;
+  character: string;
+  characterAccent: string;
+  userAccent: string;
+  openSettings: boolean,
 }
 
 export const UserModal = ({
@@ -32,17 +42,23 @@ export const UserModal = ({
   progress,
   setUser,
   setChosenLang,
+  setCharacter,
+  setCharacterAccent,
+  setUserAccent,
   user,
-  chosenLang
+  chosenLang,
+  character,
+  characterAccent,
+  userAccent,
+  openSettings,
+  setOpenSettings
 }: UserModalProps) => {
 
-    const [isSetup, setIsSetup] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
-    const [userName, setUserName] = useState('User');
-    const [language, setLanguage] = useState('uk');
     const [alertHeader, setAlertHeader] = useState('')
     const [alert, setAlert] = useState('');
     const [showReadyMessage, setShowReadyMessage] = useState<boolean>(false);
+
     const inputRef = useRef<TextInput>(null);
 
     const db = useSQLiteContext();
@@ -62,7 +78,7 @@ export const UserModal = ({
         const checkModel = async () => {
             if (!(await checkModelExists() && await checkTTSModelExists())) {
                 setAlert('I need to download my AI and speech models to function properly.');
-                setIsSetup(true);
+                setOpenSettings(true);
                 setIsOpen(true);
             } else if (!(await checkTTSModelExists()) && (await checkModelExists())) {
                 setAlertHeader('Speech model is missing or corrupted...')
@@ -77,21 +93,18 @@ export const UserModal = ({
             }
         };
         checkModel();
-    }, []);  
-
-    const onChangeText = (text: string) => {
-        setUserName(text);
-    };
+    }, []);
 
     const onSubmit = async () => {
-        setUser(userName);
-        setLanguage(language);
+        setUser(user);
+        setChosenLang(chosenLang);
         await addMessage(db, {
             role: 'system',
-            content: `You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a dialogue with ${userName}.`
+            content: `You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a dialogue with ${user}.`
         });
-        setAlertHeader(`Hi, ${userName}!`);
-        setIsSetup(false);
+        setAlertHeader(`Hi, ${user}!`);
+        setOpenSettings(false);
+        setIsOpen(true);
     };
 
     const onConfirm = async () => {
@@ -99,19 +112,164 @@ export const UserModal = ({
         await handleDownloadModel();
     }
 
-    const content = isSetup ? (
-        <View style={styles.modalContainer}>
-            <TextInput
-                ref={inputRef}
-                placeholder={user}
-                placeholderTextColor={'rgba(255, 255, 255, 0.5)'}
-                style={styles.messageInput}
-                onChangeText={onChangeText}
-                value={userName}
-                multiline
+    const char = [
+        { label: 'Male', value: 'male' },
+        { label: 'Female', value: 'female' },
+    ];
+
+    const renderChar = (item: any) => {
+      return (
+        <View style={styles.item}>
+          <Text style={styles.textItem}>{item.label}</Text>
+          {item.value === character && (
+            <AntDesign
+              style={styles.icon}
+              color="white"
+              name="checksquareo"
+              size={20}
             />
-            <View>
-                <Text style={styles.text}>Choose your communication language</Text>
+          )}
+        </View>
+      );
+    };
+
+    const charAccent = [
+        { label: 'US', value: 'us' },
+        { label: 'UK', value: 'uk' }
+    ];
+
+    const renderCharAccent = (item: any) => {
+      return (
+        <View style={styles.item}>
+          <Text style={styles.textItem}>{item.label}</Text>
+          {item.value === characterAccent && (
+            <AntDesign
+              style={styles.icon}
+              color="white"
+              name="checksquareo"
+              size={20}
+            />
+          )}
+        </View>
+      );
+    };
+
+    const usrAccent = [
+        { label: 'US', value: 'en-US' },
+        { label: 'UK', value: 'en-GB' },
+        { label: 'Australia', value: 'en-AU' },
+        { label: 'Canada', value: 'en-CA' },
+        { label: 'Ghana', value: 'en-GH' },
+        { label: 'Hong Kong', value: 'en-HK' },
+        { label: 'India', value: 'en-IN' },
+        { label: 'Ireland', value: 'en-IE' },
+        { label: 'Kenya', value: 'en-KE' },
+        { label: 'New Zealandia', value: 'en-NZ' },
+        { label: 'Nigeria', value: 'en-NG' },
+        { label: 'Pakistan', value: 'en-PK' },
+        { label: 'Philippines', value: 'en-PH' },
+        { label: 'Singapore', value: 'en-SG' },
+        { label: 'South Africa', value: 'en-ZA' },
+        { label: 'Tanzania', value: 'en-TZ' },
+    ]
+
+    const renderUsrAccent = (item: any) => {
+      return (
+        <View style={styles.item}>
+          <Text style={styles.textItem}>{item.label}</Text>
+          {item.value === userAccent && (
+            <AntDesign
+              style={styles.icon}
+              color="white"
+              name="checksquareo"
+              size={20}
+            />
+          )}
+        </View>
+      );
+    };
+
+    const content = openSettings ? (
+        <View style={styles.settingsContainer}>
+            <View style={styles.header}>
+                { character === 'male'
+                    ? <Image source={require('../assets/images/sam-smile.png')} style={styles.headerImage} />
+                    : <Image source={require('../assets/images/sam.png')} style={styles.headerImage} />
+                }
+            </View>
+            <View style={styles.settingsSubcontainer}>
+                <View>
+                    <Text style={styles.label}>Enter your name:</Text>
+                    <TextInput
+                        ref={inputRef}
+                        placeholder='Name'
+                        placeholderTextColor={'rgba(255, 255, 255, 0.5)'}
+                        style={styles.messageInput}
+                        onChangeText={(value) => setUser(value)}
+                        value={user}
+                        multiline
+                    />
+                </View>
+                <View>
+                    <Text style={styles.label}>Choose your english pronunciation:</Text>
+                    <Dropdown
+                        style={styles.dropdown}
+                        placeholderStyle={styles.placeholderStyle}
+                        selectedTextStyle={styles.selectedTextStyle}
+                        iconStyle={styles.iconStyle}
+                        data={usrAccent}
+                        maxHeight={300}
+                        labelField="label"
+                        valueField="value"
+                        placeholder="Pronunciation"
+                        searchPlaceholder="Search..."
+                        value={userAccent}
+                        onChange={item => {
+                            setUserAccent(item.value);
+                        }}
+                        renderItem={renderUsrAccent}
+                    />
+                </View>
+                <View>
+                    <Text style={styles.label}>Choose character's voice:</Text>
+                    <Dropdown
+                        style={styles.dropdown}
+                        placeholderStyle={styles.placeholderStyle}
+                        selectedTextStyle={styles.selectedTextStyle}
+                        iconStyle={styles.iconStyle}
+                        data={char}
+                        maxHeight={300}
+                        labelField="label"
+                        valueField="value"
+                        placeholder="Voice"
+                        searchPlaceholder="Search..."
+                        value={character}
+                        onChange={item => {
+                            setCharacter(item.value);
+                        }}
+                        renderItem={renderChar}
+                    />
+                </View>
+                <View>
+                    <Text style={styles.label}>Choose character's accent:</Text>
+                    <Dropdown
+                        style={styles.dropdown}
+                        placeholderStyle={styles.placeholderStyle}
+                        selectedTextStyle={styles.selectedTextStyle}
+                        iconStyle={styles.iconStyle}
+                        data={charAccent}
+                        maxHeight={300}
+                        labelField="label"
+                        valueField="value"
+                        placeholder="Accent"
+                        searchPlaceholder="Search..."
+                        value={characterAccent}
+                        onChange={item => {
+                            setCharacterAccent(item.value);
+                        }}
+                        renderItem={renderCharAccent}
+                    />
+                </View>
             </View>
             <TouchableOpacity 
                 style={styles.button}
@@ -121,34 +279,31 @@ export const UserModal = ({
             </TouchableOpacity>
         </View>
     ) : (
-        <View style={styles.modalContainer}>
-            <Text style={styles.headerText}>{alertHeader}</Text>
-            <Text style={styles.text}>{alert}</Text>
-            <TouchableOpacity 
-                style={styles.button}
-                onPress={onConfirm}
-            >
-                <Text style={styles.buttonText}>Confirm</Text>
-            </TouchableOpacity>           
-        </View>
+        <Modal
+            visible={isOpen}
+            transparent
+            animationType='fade'
+            statusBarTranslucent
+            style={{position: 'absolute'}}
+        >
+            <View style={styles.modalOverlay}>
+                <View style={styles.modalContainer}>
+                    <Text style={styles.headerText}>{alertHeader}</Text>
+                    <Text style={styles.text}>{alert}</Text>
+                    <TouchableOpacity 
+                        style={styles.button}
+                        onPress={onConfirm}
+                    >
+                        <Text style={styles.buttonText}>Confirm</Text>
+                    </TouchableOpacity>
+                </View>          
+            </View>
+        </Modal>
     )
   
     return (
         <>
-            <Modal
-                visible={isOpen}
-                transparent
-                animationType='fade'
-                statusBarTranslucent
-                style={{position: 'absolute'}}
-            >
-                <KeyboardAvoidingView
-                    behavior={ Platform.OS === 'ios' ? 'padding' : 'height' }
-                    style={styles.modalOverlay}
-                >
-                    {content}
-                </KeyboardAvoidingView>
-            </Modal>
+            { content }
             { isDownloading && (
                 <View style={styles.downloadContainer}>
                     <Text style={styles.downloadText}>
@@ -182,6 +337,25 @@ export const UserModal = ({
 }
 
 const styles = StyleSheet.create({
+    settingsContainer: {
+        flexDirection: 'column',
+        justifyContent: 'space-evenly',
+        flex: 1,
+        gap: scale(8),
+        paddingVertical: scale(16)
+    },
+    settingsSubcontainer: {
+        flexDirection: 'column',
+        gap: scale(6)
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+    },
+    headerImage: {
+        height: scale(200),
+        width: scale(200),
+    },
     modalOverlay: {
         flex: 1,
         flexDirection: 'row',
@@ -209,15 +383,26 @@ const styles = StyleSheet.create({
         borderRadius: scale(8),
         padding: scale(10),
         color: '#fff',
+        fontSize: scale(13),
+        fontFamily: 'OrbitronMd',
+        letterSpacing: scale(1),
         backgroundColor: 'rgba(30, 41, 59, 0.8)',
     },
     headerText: {
         color: '#fff',
-        fontSize: scale(14),
+        fontSize: scale(16),
+        fontFamily: 'OrbitronBold',
+        letterSpacing: scale(1),
+        textAlign: 'center'
     },
     text: {
         color: '#fff',
-        fontSize: scale(12),
+        fontSize: scale(13),
+    },
+    label: {
+        color: 'rgba(255, 255, 255, 0.7)',
+        fontSize: scale(16),
+        padding: scale(10)
     },
     button: {
         borderRadius: scale(8),
@@ -227,8 +412,9 @@ const styles = StyleSheet.create({
     },
     buttonText: {
         color: '#fff',
-        fontSize: scale(12),
+        fontSize: scale(13),
         fontFamily: 'OrbitronBold',
+        letterSpacing: scale(1),
         textAlign: 'center'
     },
     downloadContainer: {
@@ -251,5 +437,51 @@ const styles = StyleSheet.create({
     downloadText: {
         color: '#fff',
         fontSize: scale(12),
+    },
+    dropdown: {
+      borderRadius: scale(8),
+      padding: scale(10),
+      backgroundColor: 'rgba(30, 41, 59, 0.8)',
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 1,
+      },
+      shadowOpacity: 0.2,
+      shadowRadius: 1.41,
+      elevation: 2,
+    },
+    icon: {
+      marginRight: 5,
+    },
+    item: {
+      padding: scale(10),
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      backgroundColor: 'rgba(30, 41, 59, 0.8)',
+    },
+    textItem: {
+      flex: 1,
+      fontSize: scale(13),
+      fontFamily: 'OrbitronMd',
+      letterSpacing: scale(1),
+      color: '#fff',
+    },
+    placeholderStyle: {
+      fontSize: scale(13),
+      fontFamily: 'OrbitronMd',
+      letterSpacing: scale(1),
+      color: 'rgba(255, 255, 255, 0.5)',
+    },
+    selectedTextStyle: {
+      fontSize: scale(13),
+      fontFamily: 'OrbitronMd',
+      letterSpacing: scale(1),
+      color: '#fff',
+    },
+    iconStyle: {
+      width: 20,
+      height: 20,
     },
 })

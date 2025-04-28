@@ -18,7 +18,10 @@ export const useModelsManager = () => {
   const [isModelReady, setIsModelReady] = useState<boolean>(false);
   const [isTTSModelReady, setIsTTSModelReady] = useState<boolean>(false);
   const [chosenLang, setChosenLang] = useState<string>('uk');
-  const [user, setUser] = useState<string>('User');
+  const [user, setUser] = useState<string>('');
+  const [character, setCharacter] = useState<string>('');
+  const [characterAccent, setCharacterAccent] = useState<string>('')
+  const [userAccent, setUserAccent] = useState<string>('')
 
   const modelName = 'Llama-3.2-1B-Instruct-Q4_0.gguf'
 
@@ -101,7 +104,7 @@ export const useModelsManager = () => {
     if (!(await checkTTSModelExists())) {
       setIsTTSDownloading(true);
       try {
-        await downloadTTSModel(chosenLang, (progress) =>
+        await downloadTTSModel(character, characterAccent, (progress) =>
           setProgress(progress)
         );
       } catch (error) {
@@ -178,12 +181,18 @@ export const useModelsManager = () => {
     progress,
     chosenLang,
     user,
+    character,
+    characterAccent,
+    userAccent,
     setChosenLang,
     checkModelExists,
     checkTTSModelExists,
     handleDownloadModel,
     loadModel,
     setIsGenerating,
-    setUser
+    setUser,
+    setCharacter,
+    setCharacterAccent,
+    setUserAccent
   };
 };

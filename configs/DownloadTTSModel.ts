@@ -4,11 +4,12 @@ import { unzip } from "react-native-zip-archive";
 export const downloadTTSModel = async (
   // modelName: string,
   // modelUrl: string,
-  voice: string,
+  gender: string,
+  lang: string,
   onProgress: (progress: number) => void
 ): Promise<string> => {
   
-  const destPathTTS = `${RNFS.DocumentDirectoryPath}/models-${voice}-tts.zip`;
+  const destPathTTS = `${RNFS.DocumentDirectoryPath}/models-${gender}-${lang}-tts.zip`;
   try {
     const fileExists = await RNFS.exists(destPathTTS);
 
@@ -21,7 +22,7 @@ export const downloadTTSModel = async (
     // console.log("modelUrl : ", modelUrl)
 
     const downloadResult = await RNFS.downloadFile({
-      fromUrl: `https://huggingface.co/shamil010/mymodel/resolve/main/models-${voice}-tts.zip`,
+      fromUrl: `https://huggingface.co/shamil010/mymodel/resolve/main/models-${gender}-${lang}-tts.zip`,
       toFile: destPathTTS,
       progressDivider: 5,
       begin: (res) => {

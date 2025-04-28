@@ -38,8 +38,14 @@ export default function HomeScreen() {
         loadModel,
         setUser,
         setChosenLang,
+        setCharacter,
+        setCharacterAccent,
+        setUserAccent,
         user,
-        chosenLang
+        chosenLang,
+        character,
+        characterAccent,
+        userAccent
     } = useModelsManager();
 
     const db = useSQLiteContext()
@@ -348,31 +354,16 @@ export default function HomeScreen() {
             <StatusBar barStyle="light-content" />
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+                enabled={Platform.OS === 'ios'} 
                 style={{
-                    flex: 1, 
-                    position: 'relative',
-                    maxHeight: '100%'
+                    flex: 1,
                 }}
             >
-                <UserModal 
-                    handleDownloadModel={handleDownloadModel}
-                    checkModelExists={checkModelExists}
-                    checkTTSModelExists={checkTTSModelExists}
-                    loadModel={loadModel}
-                    isDownloading={isDownloading}
-                    isTTSDownloading={isTTSDownloading}
-                    isModelReady={isModelReady}
-                    isTTSModelReady={isTTSModelReady}
-                    progress={progress}
-                    setUser={setUser}
-                    setChosenLang={setChosenLang}
-                    user={user}
-                    chosenLang={chosenLang}
-                />
                 <View style={styles.mainContainer}>
                     <View style={styles.messagesContainer}>
                         <View style={styles.navBar}>
-                            <Text style={styles.title}>SAM</Text>
+                            <Text style={styles.title}>{ openSettings ? 'Settings' : 'SAM' }</Text>
                             
                             { openSettings 
                             ? <AntDesign name="menuunfold" 
@@ -387,76 +378,105 @@ export default function HomeScreen() {
                             
                         </View>
                         
-                        { keyboardEnabled 
-                            ? <ChatView messages={messages} isLoading={isLoading} /> 
-                            : <NoChatView ttsActive={ttsActive} />
+                        <UserModal 
+                            handleDownloadModel={handleDownloadModel}
+                            checkModelExists={checkModelExists}
+                            checkTTSModelExists={checkTTSModelExists}
+                            loadModel={loadModel}
+                            isDownloading={isDownloading}
+                            isTTSDownloading={isTTSDownloading}
+                            isModelReady={isModelReady}
+                            isTTSModelReady={isTTSModelReady}
+                            progress={progress}
+                            setUser={setUser}
+                            setChosenLang={setChosenLang}
+                            setCharacter={setCharacter}
+                            setCharacterAccent={setCharacterAccent}
+                            setUserAccent={setUserAccent}
+                            setOpenSettings={setOpenSettings}
+                            user={user}
+                            chosenLang={chosenLang}
+                            character={character}
+                            characterAccent={characterAccent}
+                            userAccent={userAccent}
+                            openSettings={openSettings}
+                        />
+
+                        { keyboardEnabled && !openSettings &&
+                            <ChatView messages={messages} isLoading={isLoading} /> 
                         }
+                        { !keyboardEnabled && !openSettings &&
+                            <NoChatView ttsActive={ttsActive} />
+                        }
+
                     </View>
                 </View>
-                            
-                <View style={styles.footer}>
-                    { !talkingMode ? (
-                        <TouchableOpacity onPress={() => setTalkingMode(true)}>
-                            <Image 
-                                style={[
-                                    styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
-                                ]}
-                                source={require('../assets/images/mute.png')}
-                            />
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity onPress={() => setTalkingMode(false)}>
-                            <Image 
-                                style={[
-                                    styles.microphone, {backgroundColor: '#06B6D4'}
-                                ]}
-                                source={require('../assets/images/speaker.png')}
-                            />
-                        </TouchableOpacity>
-                    )}
-                    { keyboardEnabled ? (
-                        <TouchableOpacity onPress={() => setKeyboardEnabled(false)}>
-                            <Image 
-                                style={[
-                                    styles.microphone, {backgroundColor: '#06B6D4'}
-                                ]}
-                                source={require('../assets/images/keyboard.png')}
-                            />
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity onPress={() => setKeyboardEnabled(true)}>
-                            <Image 
-                                style={[
-                                    styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
-                                ]}
-                                source={require('../assets/images/keyboard.png')}
-                            />
-                        </TouchableOpacity>
-                    )}
-                    { !recognizing ? (
-                        <TouchableOpacity 
-                            onPress={handleStart}
-                            disabled={isGenerating}
-                        >
-                            <Image 
-                                style={[
-                                    styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
-                                ]}
-                                source={require('../assets/images/microphone.png')}
-                            />
-                        </TouchableOpacity>
-                    ) : (
-                        <TouchableOpacity onPress={stopRecognition}>
-                            <Image 
-                                style={[
-                                    styles.microphone, {backgroundColor: '#06B6D4'}
-                                ]}
-                                source={require('../assets/images/microphone.png')}
-                            />
-                        </TouchableOpacity>
-                    )}
-                </View>
-                { keyboardEnabled &&
+
+                { !openSettings &&           
+                    <View style={styles.footer}>
+                        { !talkingMode ? (
+                            <TouchableOpacity onPress={() => setTalkingMode(true)}>
+                                <Image 
+                                    style={[
+                                        styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                                    ]}
+                                    source={require('../assets/images/mute.png')}
+                                />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity onPress={() => setTalkingMode(false)}>
+                                <Image 
+                                    style={[
+                                        styles.microphone, {backgroundColor: '#06B6D4'}
+                                    ]}
+                                    source={require('../assets/images/speaker.png')}
+                                />
+                            </TouchableOpacity>
+                        )}
+                        { keyboardEnabled ? (
+                            <TouchableOpacity onPress={() => setKeyboardEnabled(false)}>
+                                <Image 
+                                    style={[
+                                        styles.microphone, {backgroundColor: '#06B6D4'}
+                                    ]}
+                                    source={require('../assets/images/keyboard.png')}
+                                />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity onPress={() => setKeyboardEnabled(true)}>
+                                <Image 
+                                    style={[
+                                        styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                                    ]}
+                                    source={require('../assets/images/keyboard.png')}
+                                />
+                            </TouchableOpacity>
+                        )}
+                        { !recognizing ? (
+                            <TouchableOpacity 
+                                onPress={handleStart}
+                                disabled={isGenerating}
+                            >
+                                <Image 
+                                    style={[
+                                        styles.microphone, {backgroundColor: 'rgb(30, 41, 59)'}
+                                    ]}
+                                    source={require('../assets/images/microphone.png')}
+                                />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity onPress={stopRecognition}>
+                                <Image 
+                                    style={[
+                                        styles.microphone, {backgroundColor: '#06B6D4'}
+                                    ]}
+                                    source={require('../assets/images/microphone.png')}
+                                />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                }
+                { !openSettings && keyboardEnabled &&
                     <MessageInput
                         onShouldSend={appendTextMessage}
                     />
@@ -472,6 +492,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'stretch',
         backgroundColor: '#131313',
+        paddingTop: scale(10),
         paddingHorizontal: scale(20),
     },
     mainContainer: {
