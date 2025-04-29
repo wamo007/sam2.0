@@ -4,7 +4,6 @@ import { downloadModel } from "@/configs/DownloadModel";
 import { Alert, Platform } from "react-native";
 import { useState } from "react";
 import { downloadTTSModel } from "@/configs/DownloadTTSModel";
-import { useSQLiteContext } from "expo-sqlite";
 
 export const useModelsManager = () => {
 
@@ -95,7 +94,7 @@ export const useModelsManager = () => {
         setIsDownloading(false);
       }
     }
-    // if (!(await checkTTSModelExists())) {
+    if (!(await checkTTSModelExists())) {
       setProgress(0);
 
       setIsTTSDownloading(true);
@@ -109,11 +108,29 @@ export const useModelsManager = () => {
         Alert.alert("Error", `Download failed: ${errorMessage}`);
       } finally {
         setIsTTSDownloading(false);
-        setIsTTSModelReady(false);
+        setIsTTSModelReady(true);
       }
-    // } else {
-    //   return;
-    // }
+    } else {
+      return;
+    }
+  }
+
+  const handleDownloadTTSModel = async (character: string, characterAccent: string) => {
+    setProgress(0);
+    setIsTTSModelReady(false);
+    setIsTTSDownloading(true);
+    try {
+      await downloadTTSModel(character, characterAccent, (progress) =>
+        setProgress(progress)
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      Alert.alert("Error", `Download failed: ${errorMessage}`);
+    } finally {
+      setIsTTSDownloading(false);
+      setIsTTSModelReady(true);
+    }
   };
 
   // const stopGeneration = async () => {
@@ -180,6 +197,7 @@ export const useModelsManager = () => {
     checkModelExists,
     checkTTSModelExists,
     handleDownloadModel,
+    handleDownloadTTSModel,
     loadModel,
     setIsGenerating,
   };

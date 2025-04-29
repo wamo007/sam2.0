@@ -23,20 +23,19 @@ export default function HomeScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [talkingMode, setTalkingMode] = useState<boolean>(true);
+    const [isSetup, setIsSetup] = useState(false);
     const [openSettings, setOpenSettings] = useState<boolean>(false);
     const [user, setUser] = useState('');
     const [userAccent, setUserAccent] = useState('');
+    const [character, setCharacter] = useState('');
 
     const {
         context,
-        isModelReady,
-        isDownloading,
-        isTTSDownloading,
-        isTTSModelReady,
+        isModelReady, isTTSModelReady,
+        isDownloading, isTTSDownloading,
         progress,
-        handleDownloadModel,
-        checkModelExists,
-        checkTTSModelExists,
+        handleDownloadModel, handleDownloadTTSModel,
+        checkModelExists, checkTTSModelExists,
         loadModel,
     } = useModelsManager();
 
@@ -306,35 +305,6 @@ export default function HomeScreen() {
     const handleStart = async () => {
         await startRecognition();
     };
-
-    // const checkModelsDirectory = async () => {
-    //     const modelsDirPath = `${FileSystem.documentDirectory}models`;
-        
-    //     try {
-    //         const dirInfo = await FileSystem.getInfoAsync(modelsDirPath);
-            
-
-    //         if (dirInfo.exists) {
-    //             console.log('Models directory exists');
-                
-    //             // List directory contents
-    //             const contents = await FileSystem.readDirectoryAsync(modelsDirPath);
-    //             console.log('Contents of models directory:', contents);
-                
-    //             return contents;
-    //         } else {
-    //             console.log('Models directory does not exist');
-    //             return [];
-    //         }
-    //     } catch (error) {
-    //         console.error('Error checking models directory:', error);
-    //         return [];
-    //     }
-    // };
-
-    // useEffect(() => {
-    //     checkModelsDirectory();
-    // }, []);
     
     useKeepAwake();
     return (
@@ -356,35 +326,43 @@ export default function HomeScreen() {
                 <View style={styles.mainContainer}>
                     <View style={styles.messagesContainer}>
                         <View style={styles.navBar}>
-                            <Text style={styles.title}>{ openSettings ? 'Settings' : 'SAM' }</Text>
+                            { isSetup 
+                            ? <Text style={styles.title}>Initial Setup</Text>
+                            : (
+                                <>
+                                    <Text style={styles.title}>{ openSettings ? 'Settings' : 'SAM' }</Text>
+                                
+                                    { openSettings 
+                                    ? <AntDesign name="menuunfold" 
+                                        size={24} color="rgba(255, 255, 255, 0.7)" 
+                                        onPress={() => setOpenSettings(false)} 
+                                    />
+                                    : <AntDesign name="menufold" 
+                                        size={24} color="rgba(255, 255, 255, 0.7)" 
+                                        onPress={() => setOpenSettings(true)} 
+                                    />
+                                    }
+                                </>
+                            )}
                             
-                            { openSettings 
-                            ? <AntDesign name="menuunfold" 
-                                size={24} color="rgba(255, 255, 255, 0.7)" 
-                                onPress={() => setOpenSettings(false)} 
-                              />
-                            : <AntDesign name="menufold" 
-                                size={24} color="rgba(255, 255, 255, 0.7)" 
-                                onPress={() => setOpenSettings(true)} 
-                              />
-                            }
                             
                         </View>
                         
                         <UserModal 
                             checkModelExists={checkModelExists} checkTTSModelExists={checkTTSModelExists}
-                            handleDownloadModel={handleDownloadModel} loadModel={loadModel}
-                            isDownloading={isDownloading} isTTSDownloading={isTTSDownloading}
+                            handleDownloadTTSModel={handleDownloadTTSModel} handleDownloadModel={handleDownloadModel} loadModel={loadModel}
+                            isDownloading={isDownloading} isTTSDownloading={isTTSDownloading} progress={progress}
                             isModelReady={isModelReady} isTTSModelReady={isTTSModelReady}
                             openSettings={openSettings} setOpenSettings={setOpenSettings}
-                            progress={progress} user={user} setUser={setUser} userAccent={userAccent} setUserAccent={setUserAccent}
+                             user={user} setUser={setUser} userAccent={userAccent} setUserAccent={setUserAccent} 
+                             setIsSetup={setIsSetup} character={character} setCharacter={setCharacter}
                         />
 
                         { keyboardEnabled && !openSettings &&
                             <ChatView messages={messages} isLoading={isLoading} /> 
                         }
                         { !keyboardEnabled && !openSettings &&
-                            <NoChatView ttsActive={ttsActive} />
+                            <NoChatView ttsActive={ttsActive} character={character} />
                         }
 
                     </View>

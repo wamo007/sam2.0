@@ -3,16 +3,33 @@ import { scale } from 'react-native-size-matters';
 
 interface NoChatViewProps {
     ttsActive: boolean;
+    character: string;
 }
 
-export const NoChatView = ({ ttsActive }: NoChatViewProps) => {
+const characterImages = {
+    male: {
+        talking: require('../assets/images/talking-male.gif'),
+        silent: require('../assets/images/silent-male.png')
+    },
+    female: {
+        talking: require('../assets/images/talking-female.gif'),
+        silent: require('../assets/images/silent-female.png')
+    }
+};
+
+export const NoChatView = ({ ttsActive, character }: NoChatViewProps) => {
+    const selectedCharacter = character || 'female';
 
     return (
         <View style={styles.header}>
-            { ttsActive 
-                ? <Image source={require('../assets/images/talking.gif')} style={styles.headerImage} />
-                : <Image source={require('../assets/images/silent.png')} style={styles.headerImage} />
-            }
+
+            <Image 
+                source={ttsActive 
+                    ? characterImages[selectedCharacter as keyof typeof characterImages].talking
+                    : characterImages[selectedCharacter as keyof typeof characterImages].silent
+                } 
+                style={styles.headerImage} 
+            />
         </View>
     );
 };

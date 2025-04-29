@@ -26,7 +26,7 @@ export const onBoardingData:onBoardingDataType[] = [
             margin: scale(10),
         },
         description: 'Smart Adaptive Mind',
-        image: require('../assets/images/sam.png'),
+        image: require('../assets/images/sam-female.png'),
     },
     {
         id: 2,

@@ -10,13 +10,14 @@ export const downloadTTSModel = async (
 ): Promise<string> => {
   
   const destPathTTS = `${RNFS.DocumentDirectoryPath}/models-${gender}-${lang}-tts.zip`;
+  const modelsPath = `${RNFS.DocumentDirectoryPath}/models`
   try {
-    const fileExists = await RNFS.exists(destPathTTS);
+    const fileExists = await RNFS.exists(modelsPath);
 
     // If it exists, delete it
     if (fileExists) {
-      await RNFS.unlink(destPathTTS);
-      console.log(`Deleted existing file at ${destPathTTS}`);
+      await RNFS.unlink(modelsPath);
+      console.log(`Deleted existing file at ${modelsPath}`);
     }
     // console.log("right before download")
     // console.log("modelUrl : ", modelUrl)
@@ -36,7 +37,7 @@ export const downloadTTSModel = async (
         onProgress(Math.floor(progress));
       },
     }).promise;
-    await unzip(destPathTTS, `${RNFS.DocumentDirectoryPath}/models`);
+    await unzip(destPathTTS, modelsPath);
     await RNFS.unlink(destPathTTS);
       
     if (downloadResult.statusCode === 200) {

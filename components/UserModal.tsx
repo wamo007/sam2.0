@@ -9,6 +9,7 @@ import { User } from '@/configs/dbTypes';
 
 interface UserModalProps {
   handleDownloadModel: (char: string, charAccent:string) => Promise<void>;
+  handleDownloadTTSModel: (char: string, charAccent:string) => Promise<void>;
   checkModelExists: () => Promise<boolean | undefined>;
   checkTTSModelExists: () => Promise<boolean | undefined>;
   loadModel: () => Promise<boolean>;
@@ -23,10 +24,14 @@ interface UserModalProps {
   setUser: (user: string) => void;
   userAccent: string;
   setUserAccent: (accent: string) => void;
+  character: string;
+  setCharacter: (character: string) => void;
+  setIsSetup: (isSetup: boolean) => void;
 }
 
 export const UserModal = ({
   handleDownloadModel,
+  handleDownloadTTSModel,
   checkModelExists,
   checkTTSModelExists,
   loadModel,
@@ -40,7 +45,10 @@ export const UserModal = ({
   user,
   setUser,
   userAccent,
-  setUserAccent
+  setUserAccent,
+  character,
+  setCharacter,
+  setIsSetup
 }: UserModalProps) => {
 
     const [isOpen, setIsOpen] = useState(false);
@@ -48,7 +56,6 @@ export const UserModal = ({
     const [alert, setAlert] = useState('');
     const [showReadyMessage, setShowReadyMessage] = useState<boolean>(false);
     const [oldUser, setOldUser] = useState<User[]>([]);
-    const [character, setCharacter] = useState('');
     const [characterAccent, setCharacterAccent] = useState('');
 
     const inputRef = useRef<TextInput>(null);
@@ -89,6 +96,7 @@ export const UserModal = ({
         const checkModel = async () => {
             if (!(await checkModelExists() && await checkTTSModelExists())) {
                 setAlert('I need to download my AI and speech models to function properly.');
+                setIsSetup(true);
                 setOpenSettings(true);
                 setIsOpen(true);
             } else if (!(await checkTTSModelExists()) && (await checkModelExists())) {
@@ -122,6 +130,10 @@ export const UserModal = ({
                 content: `You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a dialogue with ${user}.`
             });
             setAlertHeader(`Hi, ${user}!`);
+            setIsSetup(false);
+        } else if (user === oldUser[0].name && (character !== oldUser[0].char || characterAccent !== oldUser[0].charAccent)) {
+            setAlertHeader(`Applying requested changes...`);
+            setAlert(`Hey ${user}, I need to download voice module to speak properly.`)
         }
 
         // Close settings and show confirmation
@@ -131,8 +143,11 @@ export const UserModal = ({
 
     const onConfirm = async () => {
         setIsOpen(false);
-        if (!oldUser || !oldUser.length || character !== oldUser[0].char || characterAccent !== oldUser[0].charAccent) {
+        
+        if (!oldUser || !oldUser.length) {
             await handleDownloadModel(character, characterAccent);
+        } else if (character !== oldUser[0].char || characterAccent !== oldUser[0].charAccent) {
+            await handleDownloadTTSModel(character, characterAccent);
         }
         
         const dbUser = await getUser(db);
@@ -220,8 +235,8 @@ export const UserModal = ({
         <View style={styles.settingsContainer}>
             <View style={styles.header}>
                 { character === 'male'
-                    ? <Image source={require('../assets/images/sam-smile.png')} style={styles.headerImage} />
-                    : <Image source={require('../assets/images/sam.png')} style={styles.headerImage} />
+                    ? <Image source={require('../assets/images/sam-male.png')} style={styles.headerImage} />
+                    : <Image source={require('../assets/images/sam-female.png')} style={styles.headerImage} />
                 }
             </View>
             <View style={styles.settingsSubcontainer}>
@@ -345,7 +360,7 @@ export const UserModal = ({
                     </Text>
                 </View>
             )}
-            { !isOpen && !(isDownloading || isTTSDownloading) && !isModelReady && (
+            { !isOpen && !openSettings && !isDownloading && isTTSDownloading && !isModelReady && (
                 <View style={styles.downloadContainer}>
                     <Text style={styles.downloadText}>
                         Warming up gears...
