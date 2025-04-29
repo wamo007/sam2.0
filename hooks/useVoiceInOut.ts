@@ -1,11 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
     ExpoSpeechRecognitionModule,
     useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
-import * as Device from 'expo-device';
 import TTSManager from 'react-native-sherpa-onnx-offline-tts';
-import { useModelsManager } from './useModelsManager';
 
 type SpeechRecognitionProps = {
     onStart?: () => void;
@@ -13,6 +11,7 @@ type SpeechRecognitionProps = {
     onTranscriptUpdate?: (transcript: string, isDraft: boolean) => void;
     onError?: (error: any) => void;
     onTTSComplete?: () => void;
+    userAccent: string;
 };
 
 export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
@@ -21,8 +20,6 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
     const [hasSpeech, setHasSpeech] = useState(false);
     const [transcriptBuffer, setTranscriptBuffer] = useState("");
     const [lastProcessedTranscript, setLastProcessedTranscript] = useState("");
-
-    const { userAccent } = useModelsManager();
 
     const startRecognition = useCallback(async () => {
         const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
@@ -33,19 +30,19 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
 
         // Start speech recognition
         ExpoSpeechRecognitionModule.start({
-            lang: userAccent,
+            lang: props.userAccent,
             interimResults: true,
             continuous: false,
             requiresOnDeviceRecognition: false,
             addsPunctuation: true,
             androidIntentOptions: {
-                EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000,
+                // EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000,
                 EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 2500,
                 EXTRA_MASK_OFFENSIVE_WORDS: false,
             },            
         });
         return true;
-    }, []);
+    }, [props.userAccent]);
 
     const stopRecognition = useCallback(() => {
         ExpoSpeechRecognitionModule.stop();
@@ -96,8 +93,8 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
 
         try {
             TTSManager.initialize("medium.onnx");
-            await TTSManager.generateAndPlay(text, 0, speed);
             setTtsActive(true);
+            await TTSManager.generateAndPlay(text, 0, speed);
 
             // Estimate TTS duration (520ms per word + 1s buffer)
             const wordCount = text.split(/\s+/).length;

@@ -1,5 +1,5 @@
-import { Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import React, { useEffect, useRef, useState } from 'react'
+import { Alert, Image, KeyboardAvoidingView, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { useEffect, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { scale } from 'react-native-size-matters'
 import { useKeepAwake } from 'expo-keep-awake'
@@ -24,6 +24,8 @@ export default function HomeScreen() {
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
     const [talkingMode, setTalkingMode] = useState<boolean>(true);
     const [openSettings, setOpenSettings] = useState<boolean>(false);
+    const [user, setUser] = useState('');
+    const [userAccent, setUserAccent] = useState('');
 
     const {
         context,
@@ -36,19 +38,9 @@ export default function HomeScreen() {
         checkModelExists,
         checkTTSModelExists,
         loadModel,
-        setUser,
-        setChosenLang,
-        setCharacter,
-        setCharacterAccent,
-        setUserAccent,
-        user,
-        chosenLang,
-        character,
-        characterAccent,
-        userAccent
     } = useModelsManager();
 
-    const db = useSQLiteContext()
+    const db = useSQLiteContext();
 
     useEffect(() => {
         const fetchMessages = async () => {
@@ -59,7 +51,7 @@ export default function HomeScreen() {
                     setMessages(dbMessages);
                 }
             } catch (error) {
-                console.error('Error fetching messages:', error);
+                console.error('Error fetching messages: ', error);
             } finally {
                 setIsLoading(false);
             }
@@ -94,7 +86,8 @@ export default function HomeScreen() {
             if (talkingMode) {
                 handleStart();
             }
-        }
+        },
+        userAccent: userAccent
     });
 
     const appendMessage = async (newMessage: string, isDraft: boolean = false) => {
@@ -379,27 +372,12 @@ export default function HomeScreen() {
                         </View>
                         
                         <UserModal 
-                            handleDownloadModel={handleDownloadModel}
-                            checkModelExists={checkModelExists}
-                            checkTTSModelExists={checkTTSModelExists}
-                            loadModel={loadModel}
-                            isDownloading={isDownloading}
-                            isTTSDownloading={isTTSDownloading}
-                            isModelReady={isModelReady}
-                            isTTSModelReady={isTTSModelReady}
-                            progress={progress}
-                            setUser={setUser}
-                            setChosenLang={setChosenLang}
-                            setCharacter={setCharacter}
-                            setCharacterAccent={setCharacterAccent}
-                            setUserAccent={setUserAccent}
-                            setOpenSettings={setOpenSettings}
-                            user={user}
-                            chosenLang={chosenLang}
-                            character={character}
-                            characterAccent={characterAccent}
-                            userAccent={userAccent}
-                            openSettings={openSettings}
+                            checkModelExists={checkModelExists} checkTTSModelExists={checkTTSModelExists}
+                            handleDownloadModel={handleDownloadModel} loadModel={loadModel}
+                            isDownloading={isDownloading} isTTSDownloading={isTTSDownloading}
+                            isModelReady={isModelReady} isTTSModelReady={isTTSModelReady}
+                            openSettings={openSettings} setOpenSettings={setOpenSettings}
+                            progress={progress} user={user} setUser={setUser} userAccent={userAccent} setUserAccent={setUserAccent}
                         />
 
                         { keyboardEnabled && !openSettings &&

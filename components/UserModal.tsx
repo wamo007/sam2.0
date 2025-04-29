@@ -1,13 +1,14 @@
-import { addMessage } from '@/configs/Database';
+import { addMessage, changeUser, getUser } from '@/configs/Database';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
-import { Image, KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { scale } from 'react-native-size-matters';
 import { Dropdown } from 'react-native-element-dropdown';
 import { AntDesign } from '@expo/vector-icons';
+import { User } from '@/configs/dbTypes';
 
 interface UserModalProps {
-  handleDownloadModel: () => Promise<void>;
+  handleDownloadModel: (char: string, charAccent:string) => Promise<void>;
   checkModelExists: () => Promise<boolean | undefined>;
   checkTTSModelExists: () => Promise<boolean | undefined>;
   loadModel: () => Promise<boolean>;
@@ -16,18 +17,12 @@ interface UserModalProps {
   isModelReady: boolean;
   isTTSModelReady: boolean;
   progress: number;
-  setUser: (user: string) => void;
-  setChosenLang: (chosenLang: string) => void;
-  setCharacter: (character: string) => void;
-  setCharacterAccent: (characterAccent: string) => void;
-  setUserAccent: (userAccent: string) => void;
   setOpenSettings: (openSettings: boolean) => void;
+  openSettings: boolean;
   user: string;
-  chosenLang: string;
-  character: string;
-  characterAccent: string;
+  setUser: (user: string) => void;
   userAccent: string;
-  openSettings: boolean,
+  setUserAccent: (accent: string) => void;
 }
 
 export const UserModal = ({
@@ -40,38 +35,54 @@ export const UserModal = ({
   isModelReady,
   isTTSModelReady,
   progress,
-  setUser,
-  setChosenLang,
-  setCharacter,
-  setCharacterAccent,
-  setUserAccent,
-  user,
-  chosenLang,
-  character,
-  characterAccent,
-  userAccent,
   openSettings,
-  setOpenSettings
+  setOpenSettings,
+  user,
+  setUser,
+  userAccent,
+  setUserAccent
 }: UserModalProps) => {
 
     const [isOpen, setIsOpen] = useState(false);
     const [alertHeader, setAlertHeader] = useState('')
     const [alert, setAlert] = useState('');
     const [showReadyMessage, setShowReadyMessage] = useState<boolean>(false);
+    const [oldUser, setOldUser] = useState<User[]>([]);
+    const [character, setCharacter] = useState('');
+    const [characterAccent, setCharacterAccent] = useState('');
 
     const inputRef = useRef<TextInput>(null);
 
     const db = useSQLiteContext();
 
     useEffect(() => {
-            if (!isDownloading && !isTTSDownloading && isModelReady && isTTSModelReady) {
-                setShowReadyMessage(true);
-                const timer = setTimeout(() => {
-                    setShowReadyMessage(false);
-                }, 2000);
-        
-                return () => clearTimeout(timer);
+        const fetchUser = async () => {
+            try {
+                const dbUser = await getUser(db);
+                if (dbUser && dbUser.length > 0) {
+                    setOldUser(dbUser);
+                    setUser(dbUser[0].name);
+                    setUserAccent(dbUser[0].accent);
+                    setCharacter(dbUser[0].char);
+                    setCharacterAccent(dbUser[0].charAccent);
+                };
+            } catch (error) {
+                console.error('Error fetching messages: ', error);
             }
+        };
+
+        fetchUser()
+    }, []);
+
+    useEffect(() => {
+        if (!isDownloading && !isTTSDownloading && isModelReady && isTTSModelReady) {
+            setShowReadyMessage(true);
+            const timer = setTimeout(() => {
+                setShowReadyMessage(false);
+            }, 2000);
+    
+            return () => clearTimeout(timer);
+        }
     }, [isDownloading, isTTSDownloading, isModelReady, isTTSModelReady]);
 
     useEffect(() => {
@@ -96,20 +107,36 @@ export const UserModal = ({
     }, []);
 
     const onSubmit = async () => {
-        setUser(user);
-        setChosenLang(chosenLang);
-        await addMessage(db, {
-            role: 'system',
-            content: `You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a dialogue with ${user}.`
+        // First update the user in database
+        await changeUser(db, {
+            name: user,
+            accent: userAccent,
+            char: character,
+            charAccent: characterAccent
         });
-        setAlertHeader(`Hi, ${user}!`);
+
+        // If name changed, add the system message
+        if (!oldUser || !oldUser.length || user !== oldUser[0].name) {
+            await addMessage(db, {
+                role: 'system',
+                content: `You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a dialogue with ${user}.`
+            });
+            setAlertHeader(`Hi, ${user}!`);
+        }
+
+        // Close settings and show confirmation
         setOpenSettings(false);
         setIsOpen(true);
     };
 
     const onConfirm = async () => {
         setIsOpen(false);
-        await handleDownloadModel();
+        if (!oldUser || !oldUser.length || character !== oldUser[0].char || characterAccent !== oldUser[0].charAccent) {
+            await handleDownloadModel(character, characterAccent);
+        }
+        
+        const dbUser = await getUser(db);
+        setOldUser(dbUser);
     }
 
     const char = [

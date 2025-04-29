@@ -1,6 +1,5 @@
-import { Message } from '@/configs/dbTypes';
+import { Message, User } from '@/configs/dbTypes';
 import { type SQLiteDatabase } from 'expo-sqlite';
-import * as FileSystem from 'expo-file-system';
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
   
@@ -21,6 +20,13 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
           role TEXT NOT NULL,
           content TEXT NOT NULL,
           isDraft INTEGER DEFAULT 0
+      );
+
+      CREATE TABLE user (
+          name TEXT NOT NULL,
+          accent TEXT NOT NULL,
+          char TEXT NOT NULL,
+          charAccent TEXT NOT NULL
       );
   `);
 
@@ -59,6 +65,31 @@ export const addMessage = async (
     content,
     // timestamp,
     isDraft ? 1 : 0
+  );
+};
+
+export const changeUser = async (
+  db: SQLiteDatabase,
+  { name, accent, char, charAccent }: User
+) => {
+  await db.runAsync('DELETE FROM user');
+  return await db.runAsync(
+    'INSERT INTO user (name, accent, char, charAccent) VALUES (?, ?, ?, ?)',
+    name,
+    accent,
+    char,
+    charAccent
+  );
+};
+
+export const getUser = async (db: SQLiteDatabase): Promise<User[]> => {
+  return (await db.getAllAsync<User>('SELECT * FROM user')).map(
+    (user) => ({
+      name: user.name,
+      accent: user.accent,
+      char: user.char,
+      charAccent: user.charAccent
+    })
   );
 };
 

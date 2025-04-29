@@ -4,7 +4,6 @@ import { downloadModel } from "@/configs/DownloadModel";
 import { Alert, Platform } from "react-native";
 import { useState } from "react";
 import { downloadTTSModel } from "@/configs/DownloadTTSModel";
-import { addMessage } from "@/configs/Database";
 import { useSQLiteContext } from "expo-sqlite";
 
 export const useModelsManager = () => {
@@ -13,15 +12,10 @@ export const useModelsManager = () => {
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [isTTSDownloading, setIsTTSDownloading] = useState<boolean>(false);
   const [context, setContext] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isModelReady, setIsModelReady] = useState<boolean>(false);
   const [isTTSModelReady, setIsTTSModelReady] = useState<boolean>(false);
   const [chosenLang, setChosenLang] = useState<string>('uk');
-  const [user, setUser] = useState<string>('');
-  const [character, setCharacter] = useState<string>('');
-  const [characterAccent, setCharacterAccent] = useState<string>('')
-  const [userAccent, setUserAccent] = useState<string>('')
 
   const modelName = 'Llama-3.2-1B-Instruct-Q4_0.gguf'
 
@@ -75,7 +69,7 @@ export const useModelsManager = () => {
     }
   };
 
-  const handleDownloadModel = async () => {
+  const handleDownloadModel = async (character: string, characterAccent: string) => {
 
     setProgress(0);
 
@@ -101,7 +95,9 @@ export const useModelsManager = () => {
         setIsDownloading(false);
       }
     }
-    if (!(await checkTTSModelExists())) {
+    // if (!(await checkTTSModelExists())) {
+      setProgress(0);
+
       setIsTTSDownloading(true);
       try {
         await downloadTTSModel(character, characterAccent, (progress) =>
@@ -115,9 +111,9 @@ export const useModelsManager = () => {
         setIsTTSDownloading(false);
         setIsTTSModelReady(false);
       }
-    } else {
-      return;
-    }
+    // } else {
+    //   return;
+    // }
   };
 
   // const stopGeneration = async () => {
@@ -180,19 +176,11 @@ export const useModelsManager = () => {
     isTTSModelReady,
     progress,
     chosenLang,
-    user,
-    character,
-    characterAccent,
-    userAccent,
     setChosenLang,
     checkModelExists,
     checkTTSModelExists,
     handleDownloadModel,
     loadModel,
     setIsGenerating,
-    setUser,
-    setCharacter,
-    setCharacterAccent,
-    setUserAccent
   };
 };
