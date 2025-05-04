@@ -3,20 +3,17 @@ import {
     ExpoSpeechRecognitionModule,
     useSpeechRecognitionEvent,
 } from "expo-speech-recognition";
-import TTSManager from 'react-native-sherpa-onnx-offline-tts';
 
 type SpeechRecognitionProps = {
     onStart?: () => void;
     onEnd?: (finalTranscript: string) => void;
     onTranscriptUpdate?: (transcript: string, isDraft: boolean) => void;
     onError?: (error: any) => void;
-    onTTSComplete?: () => void;
     userAccent: string;
 };
 
-export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
+export const useVoiceRecognition = (props: SpeechRecognitionProps) => {
     const [recognizing, setRecognizing] = useState(false);
-    const [ttsActive, setTtsActive] = useState(false);
     const [hasSpeech, setHasSpeech] = useState(false);
     const [transcriptBuffer, setTranscriptBuffer] = useState("");
     const [lastProcessedTranscript, setLastProcessedTranscript] = useState("");
@@ -36,7 +33,7 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
             requiresOnDeviceRecognition: false,
             addsPunctuation: true,
             androidIntentOptions: {
-                // EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 3000,
+                EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 2500,
                 EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 2500,
                 EXTRA_MASK_OFFENSIVE_WORDS: false,
             },            
@@ -50,7 +47,6 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
 
     useSpeechRecognitionEvent("start", () => {
         setRecognizing(true);
-        setTtsActive(false);
         props.onStart?.();
     });
 
@@ -84,39 +80,9 @@ export const useVoiceInteraction = (props: SpeechRecognitionProps) => {
         props.onError?.(event);
     });
 
-    const speak = useCallback(async (text: string) => {
-
-        let speed = 0.8;
-        // if (userAccent === "ru-RU") {
-        //     speed = 1.1;
-        // }
-
-        try {
-            TTSManager.initialize("medium.onnx");
-            setTtsActive(true);
-            await TTSManager.generateAndPlay(text, 0, speed);
-
-            // Estimate TTS duration (520ms per word + 1s buffer)
-            const wordCount = text.split(/\s+/).length;
-            const totalPunctuationCount = (text.match(/[.,!?;:]/g) || []).length + (text.match(/\n/g) || []).length;
-            const estimatedDuration = Math.max(2000, wordCount * 255  + totalPunctuationCount * 200 + 1000);
-            
-            setTimeout(() => {
-                setTtsActive(false);
-                props.onTTSComplete?.();
-            }, estimatedDuration);
-        } catch (error) {
-            console.error('TTS Error:', error);
-            setTtsActive(false);
-            throw error;
-        }
-    }, []);
-
     return {
         recognizing,
-        ttsActive,
         startRecognition,
-        stopRecognition,
-        speak
+        stopRecognition
     };
 };

@@ -1,4 +1,5 @@
 import RNFS from "react-native-fs";
+import * as FileSystem from "expo-file-system";
 import { unzip } from "react-native-zip-archive";
 
 export const downloadTTSModel = async (
@@ -9,41 +10,39 @@ export const downloadTTSModel = async (
   onProgress: (progress: number) => void
 ): Promise<string> => {
   
-  const destPathTTS = `${RNFS.DocumentDirectoryPath}/models-${gender}-${lang}-tts.zip`;
-  const modelsPath = `${RNFS.DocumentDirectoryPath}/models`
+  const destPathTTS = `${FileSystem.documentDirectory}models-${gender}-${lang}-tts.zip`;
+  const modelsPath = `${FileSystem.documentDirectory}models`
   try {
-    const fileExists = await RNFS.exists(modelsPath);
+    const fileInfo = await FileSystem.getInfoAsync(modelsPath);
 
     // If it exists, delete it
-    if (fileExists) {
-      await RNFS.unlink(modelsPath);
+    if (fileInfo.exists) {
+      await FileSystem.deleteAsync(modelsPath);
       console.log(`Deleted existing file at ${modelsPath}`);
     }
     // console.log("right before download")
     // console.log("modelUrl : ", modelUrl)
 
-    const downloadResult = await RNFS.downloadFile({
-      fromUrl: `https://huggingface.co/shamil010/mymodel/resolve/main/models-${gender}-${lang}-tts.zip`,
-      toFile: destPathTTS,
-      progressDivider: 5,
-      begin: (res) => {
-        // console.log("Response begin ===\n\n");
-        console.log(res);
-      },
-      progress: ({ bytesWritten, contentLength }: { bytesWritten: number; contentLength: number }) => {
-        // console.log("Response written ===\n\n");
-        const progress = (bytesWritten / contentLength) * 100;
-        // console.log("progress : ",progress)
+    const downloadResumable = FileSystem.createDownloadResumable(
+      `https://huggingface.co/shamil010/mymodel/resolve/main/models-${gender}-${lang}-tts.zip`,
+      destPathTTS,
+      {},
+      (downloadProgress) => {
+        const progress = 
+          (downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite) * 100;
         onProgress(Math.floor(progress));
-      },
-    }).promise;
+      }
+    );
+  
+    const downloadResult = await downloadResumable.downloadAsync();
+
     await unzip(destPathTTS, modelsPath);
     await RNFS.unlink(destPathTTS);
       
-    if (downloadResult.statusCode === 200) {
+    if (downloadResult?.uri) {
       return destPathTTS;
     } else {
-      throw new Error(`Download failed with status code: ${downloadResult.statusCode}`);
+      throw new Error(`Download failed: No TTS model returned`);
     }
   } catch (error) {
     if (error instanceof Error) {

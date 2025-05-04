@@ -4,17 +4,17 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { scale } from 'react-native-size-matters'
 import { useKeepAwake } from 'expo-keep-awake'
 import MessageInput from '../components/MessageInput';
+import TTSManager from 'react-native-sherpa-onnx-offline-tts';
 import { useModelsManager } from '@/hooks/useModelsManager';
-import { useVoiceInteraction } from '../hooks/useVoiceInOut';
-import { addMessage, getAllMessages } from '@/configs/Database';
+import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
+import { addMessage, getMessages, removeMemories } from '@/configs/Database';
 import { Message } from '@/configs/dbTypes';
 import { useSQLiteContext } from 'expo-sqlite';
-import * as Sharing from 'expo-sharing'
-import * as FileSystem from 'expo-file-system'
 import { UserModal } from '@/components/UserModal'
 import { ChatView } from '@/components/ChatView'
 import { NoChatView } from '@/components/NoChatView'
 import { AntDesign } from '@expo/vector-icons'
+import { EmitterSubscription } from 'react-native';
 
 export default function HomeScreen() {
 
@@ -22,12 +22,15 @@ export default function HomeScreen() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
-    const [talkingMode, setTalkingMode] = useState<boolean>(true);
+    const [ttsActive, setTtsActive] = useState(false);
+    const [talkingMode, setTalkingMode] = useState<boolean>(false);
     const [isSetup, setIsSetup] = useState(false);
     const [openSettings, setOpenSettings] = useState<boolean>(false);
     const [user, setUser] = useState('');
     const [userAccent, setUserAccent] = useState('');
     const [character, setCharacter] = useState('');
+    const [characterAccent, setCharacterAccent] = useState('');
+    const [ttsSubscription, setTtsSubscription] = useState<EmitterSubscription | null>(null);
 
     const {
         context,
@@ -45,7 +48,7 @@ export default function HomeScreen() {
         const fetchMessages = async () => {
             try {
                 setIsLoading(true);
-                const dbMessages = await getAllMessages(db);
+                const dbMessages = await getMessages(db);
                 if (dbMessages) {
                     setMessages(dbMessages);
                 }
@@ -57,15 +60,23 @@ export default function HomeScreen() {
         };
 
         fetchMessages();
-    }, [db]);
+    }, [db, isSetup]);
+
+    const cleanupTTS = () => {
+        if (ttsSubscription) {
+            ttsSubscription.remove();
+            setTtsSubscription(null);
+        }
+        
+        TTSManager.deinitialize();
+        setTtsActive(false);
+    };
 
     const {
         recognizing,
-        speak,
         startRecognition,
         stopRecognition,
-        ttsActive
-    } = useVoiceInteraction({
+    } = useVoiceRecognition({
         onStart: () => {},
         onEnd: async (finalTranscript) => {
             if (finalTranscript.trim()) {
@@ -81,16 +92,14 @@ export default function HomeScreen() {
         onError: (error) => {
             console.log("Speech recognition error:", error);
         },
-        onTTSComplete: () => {
-            if (talkingMode) {
-                handleStart();
-            }
-        },
         userAccent: userAccent
     });
 
     const appendMessage = async (newMessage: string, isDraft: boolean = false) => {
         if (!newMessage.trim()) return;
+        
+        let toRemember = false;
+        if (newMessage.toLowerCase().includes('remember') || newMessage.toLowerCase().includes('memorize')) toRemember = true;
 
         // Handle user message
         setMessages(prev => {
@@ -121,15 +130,12 @@ export default function HomeScreen() {
                     role: 'user',
                     content: newMessage,
                     isDraft: false,
+                    toRemember: toRemember
                 }
             ];
         });
-
+        
         if (!isDraft) {
-            await addMessage(db, {
-                role: 'user',
-                content: newMessage,
-            });
 
             setMessages(prev => prev.filter(msg => 
                 !(msg.role === 'user' && msg.isDraft)
@@ -145,19 +151,39 @@ export default function HomeScreen() {
                     Alert.alert("Input Error", "Please enter a message.");
                     return;
                 }
-                
-                const lastMessages = messages.length <= 10 ? messages : messages.slice(-10);
+
+                if (newMessage.toLowerCase().includes('forget') && newMessage.toLowerCase().includes('memories')) {
+                    await forgetMemories();
+                }
+
+                const msg = messages.map(m => ({
+                    role: m.role,
+                    content: m.content,
+                    toRemember: m.toRemember
+                }));
+                const systemMessage = { 
+                    role: 'system', 
+                    content: `Your are SAM, a friendly and sarcastic ${character} companion. This is a conversation with a user - ${user}.
+                    Please respond clearly and concisely, using no more than 3 sentences per answer.
+                    Do not repeat or paraphrase ${user}'s input.
+                    Do not use stage directions (e.g., sigh, shrugs, laughs) in your responses.` 
+                }
+                const lastMessages = msg.length <= 8 ? msg : msg.slice(-8);
+                const rememberedMessages = msg.length <= 8 ? [] : msg.slice(0, -8).filter(msg => msg.toRemember);
                 
                 let newConversation = [];
-                if (lastMessages[lastMessages.length - 1].role === 'user' && lastMessages[lastMessages.length - 1].content === newMessage) {
-                    newConversation = lastMessages
-                } else {
+                if (lastMessages[lastMessages.length - 1].role !== 'user' && lastMessages[lastMessages.length - 1].content !== newMessage) {
                     newConversation = 
                         [
+                            systemMessage,
+                            ...rememberedMessages,
                             ...lastMessages,
-                            { role: "user", content: newMessage, isDraft: false },
+                            { role: "user", content: newMessage },
                         ];
+                } else {
+                    newConversation = [systemMessage, ...rememberedMessages, ...lastMessages];
                 }
+                
                 setIsGenerating(true);
 
                 try {
@@ -172,19 +198,6 @@ export default function HomeScreen() {
                     "<|end_of_text|>",
                     "<｜end▁of▁sentence｜>",
                   ];
-
-                  // Create chat array with current messages plus the new user message
-                  // const chat = newConversation;
-                  if (newConversation.some(msg => msg.role !== 'system')) {
-                    newConversation = [
-                        ...newConversation.slice(0, -1),
-                        { 
-                            role: 'system', 
-                            content: `You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a dialogue with ${user}.` 
-                        },
-                        newConversation[newConversation.length - 1]
-                    ];
-                  }
             
                   // Append a placeholder for the assistant's response
                   setMessages((prev) => [
@@ -200,7 +213,6 @@ export default function HomeScreen() {
             
                   interface CompletionData {
                     token: string;
-                    // completed?: boolean;
                   }
             
                   interface CompletionResult {
@@ -259,7 +271,45 @@ export default function HomeScreen() {
                   
                   if (talkingMode) {
                     try {
-                        await speak(finalContent);
+                        let speed = 0.8;
+                        if (characterAccent === "uk" && character === "male") {
+                            speed = 1.0;
+                        }
+
+                        try {
+                            // const config = getTTSConfig();
+                            TTSManager.initialize("medium.onnx");
+                            
+                            if (ttsSubscription) {
+                                ttsSubscription.remove();
+                                setTtsSubscription(null);
+                            }
+                            
+                            await TTSManager.generateAndPlay(finalContent, 0, speed);
+                            setTtsActive(true);
+     
+                            let zeroVolumeCount = 0;
+                            const subscription = TTSManager.addVolumeListener((volume: number) => {
+                                console.log(volume);
+                                if (volume === 0) {
+                                    zeroVolumeCount++;
+                                    if (zeroVolumeCount >= 7) {
+                                        subscription.remove();
+                                        setTtsSubscription(null);
+                                        setTtsActive(false);
+                                        handleStart();
+                                        zeroVolumeCount = 0; // Reset counter
+                                    }
+                                } else {
+                                    zeroVolumeCount = 0; // Reset counter if volume is not zero
+                                }
+                            });
+                            setTtsSubscription(subscription);
+                        } catch (error) {
+                            console.error('TTS Error:', error);
+                            setTtsActive(false);
+                            throw error;
+                        }
                     } catch (error) {
                         console.error("Error in speech sequence: ", error);
                         setTalkingMode(false);
@@ -274,9 +324,18 @@ export default function HomeScreen() {
                     return updated;
                   });
 
+                  
+                  await addMessage(db, {
+                      role: 'user',
+                      content: newMessage,
+                      isDraft: false,
+                      toRemember: toRemember
+                  });
+
                   await addMessage(db, {
                     role: 'assistant',
                     content: finalContent,
+                    isDraft: false
                   });
             
                 } catch (error) {
@@ -295,15 +354,28 @@ export default function HomeScreen() {
     };
 
     const appendTextMessage = async (text: string) => {
+        setTtsActive(false);
+        setTalkingMode(false);
+        // cleanupTTS();
         await appendMessage(text, false);
     }
 
-    const exportDB = async () => {
-        await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
-    }
-
     const handleStart = async () => {
+        cleanupTTS();
+        setTalkingMode(true);
         await startRecognition();
+    };
+
+    const forgetMemories = async () => {
+        try {
+            // Update messages in memory
+            setMessages(prev => prev.map(msg => ({...msg, toRemember: false})));
+            
+            // Update messages in database
+            await removeMemories(db);
+        } catch (error) {
+            console.error('Error forgetting memories: ', error);
+        }
     };
     
     useKeepAwake();
@@ -333,14 +405,33 @@ export default function HomeScreen() {
                                     <Text style={styles.title}>{ openSettings ? 'Settings' : 'SAM' }</Text>
                                 
                                     { openSettings 
-                                    ? <AntDesign name="menuunfold" 
-                                        size={24} color="rgba(255, 255, 255, 0.7)" 
-                                        onPress={() => setOpenSettings(false)} 
-                                    />
-                                    : <AntDesign name="menufold" 
-                                        size={24} color="rgba(255, 255, 255, 0.7)" 
-                                        onPress={() => setOpenSettings(true)} 
-                                    />
+                                        ? <TouchableOpacity 
+                                            onPress={() => setOpenSettings(false)}
+                                            style={{
+                                                padding: 10,  // Add padding around the icon
+                                                marginRight: -10  // Offset the padding to maintain visual position
+                                            }}
+                                            hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                                        >
+                                            <AntDesign 
+                                                name="menuunfold" 
+                                                size={24} 
+                                                color="rgba(255, 255, 255, 0.7)" 
+                                            />
+                                        </TouchableOpacity>
+                                        : <TouchableOpacity 
+                                            onPress={() => setOpenSettings(true)}
+                                            style={{
+                                                padding: 10,  // Add padding around the icon
+                                                marginRight: -10  // Offset the padding to maintain visual position
+                                            }}
+                                        >
+                                            <AntDesign 
+                                                name="menufold" 
+                                                size={24} 
+                                                color="rgba(255, 255, 255, 0.7)" 
+                                            />
+                                        </TouchableOpacity>
                                     }
                                 </>
                             )}
@@ -354,8 +445,8 @@ export default function HomeScreen() {
                             isDownloading={isDownloading} isTTSDownloading={isTTSDownloading} progress={progress}
                             isModelReady={isModelReady} isTTSModelReady={isTTSModelReady}
                             openSettings={openSettings} setOpenSettings={setOpenSettings}
-                             user={user} setUser={setUser} userAccent={userAccent} setUserAccent={setUserAccent} 
-                             setIsSetup={setIsSetup} character={character} setCharacter={setCharacter}
+                            user={user} setUser={setUser} userAccent={userAccent} setUserAccent={setUserAccent} 
+                            setIsSetup={setIsSetup} character={character} setCharacter={setCharacter} characterAccent={characterAccent} setCharacterAccent={setCharacterAccent}
                         />
 
                         { keyboardEnabled && !openSettings &&

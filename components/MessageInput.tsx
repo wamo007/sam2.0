@@ -1,5 +1,4 @@
-import AntDesign from '@expo/vector-icons/AntDesign';
-
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { View, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 import {
   useSharedValue,
@@ -53,12 +52,12 @@ const MessageInput = ({ onShouldSend }: MessageInputProps ) => {
           multiline
         />
         <TouchableOpacity>
-            <AntDesign 
-                onPress={onSend} 
-                name="arrowup" 
-                size={scale(22)} 
-                color={'rgb(5, 153, 179)'} 
-            />
+          <Ionicons 
+            onPress={onSend} 
+            name="send" 
+            size={scale(22)} 
+            color={'rgb(5, 153, 179)'} 
+          />
         </TouchableOpacity>
 
       </View>

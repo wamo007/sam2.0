@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { scale } from 'react-native-size-matters';
 
@@ -17,22 +18,26 @@ const characterImages = {
     }
 };
 
-export const NoChatView = ({ ttsActive, character }: NoChatViewProps) => {
+export const NoChatView = memo(({ ttsActive, character }: NoChatViewProps) => {
     const selectedCharacter = character || 'female';
+
+    const currentImage = useMemo(() => {
+        return ttsActive 
+            ? characterImages[selectedCharacter as keyof typeof characterImages].talking
+            : characterImages[selectedCharacter as keyof typeof characterImages].silent;
+    }, [ttsActive, selectedCharacter]);
 
     return (
         <View style={styles.header}>
-
             <Image 
-                source={ttsActive 
-                    ? characterImages[selectedCharacter as keyof typeof characterImages].talking
-                    : characterImages[selectedCharacter as keyof typeof characterImages].silent
-                } 
-                style={styles.headerImage} 
+                key={`${selectedCharacter}-${ttsActive}`}
+                source={currentImage}
+                style={styles.headerImage}
+                fadeDuration={0}
             />
         </View>
     );
-};
+});
 
 const styles = StyleSheet.create({
     header: {

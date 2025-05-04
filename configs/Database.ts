@@ -19,7 +19,8 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
           id INTEGER PRIMARY KEY NOT NULL, 
           role TEXT NOT NULL,
           content TEXT NOT NULL,
-          isDraft INTEGER DEFAULT 0
+          isDraft INTEGER DEFAULT 0,
+          toRemember INTEGER DEFAULT 0
       );
 
       CREATE TABLE user (
@@ -57,15 +58,31 @@ export const getAllMessages = async (db: SQLiteDatabase): Promise<Message[]> => 
 
 export const addMessage = async (
   db: SQLiteDatabase,
-  { role, content, isDraft }: Message
+  { role, content, isDraft, toRemember }: Message
 ) => {
   return await db.runAsync(
-    'INSERT INTO messages (role, content, isDraft) VALUES (?, ?, ?)',
+    'INSERT INTO messages (role, content, isDraft, toRemember) VALUES (?, ?, ?, ?)',
     role,
     content,
     // timestamp,
-    isDraft ? 1 : 0
+    isDraft ? 1 : 0,
+    toRemember ? 1 : 0
   );
+};
+
+export const removeMemories = async (
+  db: SQLiteDatabase,
+  // { role, content, isDraft, toRemember }: Message
+) => {
+  try {
+    await db.runAsync(
+      'UPDATE messages SET toRemember = 0 WHERE toRemember = 1'
+    );
+    return true;
+  } catch (error) {
+    console.error('Error removing memories:', error);
+    return false;
+  }
 };
 
 export const changeUser = async (

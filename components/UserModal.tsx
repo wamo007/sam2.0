@@ -26,6 +26,8 @@ interface UserModalProps {
   setUserAccent: (accent: string) => void;
   character: string;
   setCharacter: (character: string) => void;
+  characterAccent: string;
+  setCharacterAccent: (characterAccent: string) => void;
   setIsSetup: (isSetup: boolean) => void;
 }
 
@@ -48,6 +50,8 @@ export const UserModal = ({
   setUserAccent,
   character,
   setCharacter,
+  characterAccent,
+  setCharacterAccent,
   setIsSetup
 }: UserModalProps) => {
 
@@ -56,7 +60,6 @@ export const UserModal = ({
     const [alert, setAlert] = useState('');
     const [showReadyMessage, setShowReadyMessage] = useState<boolean>(false);
     const [oldUser, setOldUser] = useState<User[]>([]);
-    const [characterAccent, setCharacterAccent] = useState('');
 
     const inputRef = useRef<TextInput>(null);
 
@@ -127,13 +130,19 @@ export const UserModal = ({
         if (!oldUser || !oldUser.length || user !== oldUser[0].name) {
             await addMessage(db, {
                 role: 'system',
-                content: `You are SAM - a friendly and sarcastic companion. You do not use facial or body expressions in your responses. This is a dialogue with ${user}.`
+                content: `Your are SAM, a friendly and sarcastic ${character} companion. This is a conversation with a user - ${user}.
+                Please respond clearly and concisely, using no more than 3 sentences per answer.
+                Do not repeat or paraphrase ${user}'s input.
+                Do not use stage directions (e.g., sigh, shrugs, laughs) in your responses.`
             });
             setAlertHeader(`Hi, ${user}!`);
             setIsSetup(false);
         } else if (user === oldUser[0].name && (character !== oldUser[0].char || characterAccent !== oldUser[0].charAccent)) {
             setAlertHeader(`Applying requested changes...`);
             setAlert(`Hey ${user}, I need to download voice module to speak properly.`)
+        } else if (user === oldUser[0].name && character === oldUser[0].char && characterAccent === oldUser[0].charAccent) {
+            setAlertHeader(`Successfully updated`);
+            setAlert(``)
         }
 
         // Close settings and show confirmation
@@ -527,3 +536,10 @@ const styles = StyleSheet.create({
       height: 20,
     },
 })
+
+// import * as Sharing from 'expo-sharing'
+// import * as FileSystem from 'expo-file-system'
+
+// const exportDB = async () => {
+//     await Sharing.shareAsync(FileSystem.documentDirectory + 'SQLite/chatSAM.db')
+// }

@@ -1,12 +1,9 @@
-import RNFS from "react-native-fs";
+import * as FileSystem from 'expo-file-system';
 
 export const downloadModel = async (
-  // modelName: string,
-  // modelUrl: string,
   language: string,
   onProgress: (progress: number) => void
 ): Promise<string> => {
-  
   let model;
   if (language === 'ru') {
     model = 'Vikhr-Qwen-2.5-1.5b-Instruct-Q3_K_S.gguf';
@@ -14,39 +11,34 @@ export const downloadModel = async (
     model = 'Llama-3.2-1B-Instruct-Q4_0.gguf';
   }
 
-  const destPath = `${RNFS.DocumentDirectoryPath}/Llama-3.2-1B-Instruct-Q4_0.gguf`;
+  const destPath = `${FileSystem.documentDirectory}${model}`;
+  
   try {
-    const fileExists = await RNFS.exists(destPath);
+    const fileInfo = await FileSystem.getInfoAsync(destPath);
 
-    // If it exists, delete it
-    if (fileExists) {
-      await RNFS.unlink(destPath);
+    // If file exists, delete it
+    if (fileInfo.exists) {
+      await FileSystem.deleteAsync(destPath);
       console.log(`Deleted existing file at ${destPath}`);
     }
-    // console.log("right before download")
-    // console.log("modelUrl : ", modelUrl)
 
-    const downloadResult = await RNFS.downloadFile({
-      fromUrl: `https://huggingface.co/shamil010/mymodel/resolve/main/${model}`,
-      toFile: destPath,
-      progressDivider: 5,
-      begin: (res) => {
-        // console.log("Response begin ===\n\n");
-        console.log(res);
-      },
-      progress: ({ bytesWritten, contentLength }: { bytesWritten: number; contentLength: number }) => {
-        // console.log("Response written ===\n\n");
-        const progress = (bytesWritten / contentLength) * 100;
-        // console.log("progress : ",progress)
+    const downloadResumable = FileSystem.createDownloadResumable(
+      `https://huggingface.co/shamil010/mymodel/resolve/main/${model}`,
+      destPath,
+      {},
+      (downloadProgress) => {
+        const progress = 
+          (downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite) * 100;
         onProgress(Math.floor(progress));
-      },
-    }).promise;
-    // console.log("right after download")
+      }
+    );
 
-    if (downloadResult.statusCode === 200) {
+    const downloadResult = await downloadResumable.downloadAsync();
+    
+    if (downloadResult?.uri) {
       return destPath;
     } else {
-      throw new Error(`Download failed with status code: ${downloadResult.statusCode}`);
+      throw new Error('Download failed: No URI returned');
     }
   } catch (error) {
     if (error instanceof Error) {

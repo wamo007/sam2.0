@@ -4,6 +4,7 @@ import { downloadModel } from "@/configs/DownloadModel";
 import { Alert, Platform } from "react-native";
 import { useState } from "react";
 import { downloadTTSModel } from "@/configs/DownloadTTSModel";
+import TTSManager from 'react-native-sherpa-onnx-offline-tts';
 
 export const useModelsManager = () => {
 
@@ -29,6 +30,12 @@ export const useModelsManager = () => {
       const files = await FileSystem.readDirectoryAsync(directoryTTSPath);
       const onnxFile = files.find(file => file.endsWith('.onnx'));
       if (files.length === 3 && onnxFile) {
+        try {
+          TTSManager.initialize("medium.onnx");
+        } catch (error) {
+          console.log('Model is not functional');
+          return null;
+        }
         return onnxFile;
       } else {
         return null;

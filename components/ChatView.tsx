@@ -44,7 +44,7 @@ export const ChatView = ({ messages, isLoading }: ChatViewProps) => {
                             <View key={index} style={styles.userMessageContainer}>
                                 <View style={styles.userMessage}>
                                     <Text style={styles.userMessageText}>
-                                        {message.content}
+                                        {message.content.charAt(0).toUpperCase() + message.content.slice(1)}
                                     </Text>
                                 </View>
                             </View>
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     },
     userMessageText: {
         color: '#FFFFFF',
-        textAlign: 'right',
+        textAlign: 'left',
     },
     loadingContainer: {
         flex: 1,
