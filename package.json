@@ -1,5 +1,5 @@
 {
-  "name": "sam2.0",
+  "name": "sam",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -43,7 +43,8 @@
     "react-native-screens": "~4.4.0",
     "react-native-sherpa-onnx-offline-tts": "^0.2.2",
     "react-native-size-matters": "^0.4.2",
-    "react-native-zip-archive": "^7.0.1"
+    "react-native-zip-archive": "^7.0.1",
+    "whisper.rn": "^0.4.0-rc.11"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -6,17 +6,21 @@ import { scale } from 'react-native-size-matters';
 import { Dropdown } from 'react-native-element-dropdown';
 import { AntDesign } from '@expo/vector-icons';
 import { User } from '@/configs/dbTypes';
+import * as FileSystem from 'expo-file-system';
 
-interface UserModalProps {
+interface UserProps {
   handleDownloadModel: (char: string, charAccent:string) => Promise<void>;
   handleDownloadTTSModel: (char: string, charAccent:string) => Promise<void>;
   checkModelExists: () => Promise<boolean | undefined>;
   checkTTSModelExists: () => Promise<boolean | undefined>;
+  checkSTTModelExists: () => Promise<boolean | undefined>;
   loadModel: () => Promise<boolean>;
   isDownloading: boolean;
   isTTSDownloading: boolean;
+  isSTTDownloading: boolean;
   isModelReady: boolean;
   isTTSModelReady: boolean;
+  isSTTModelReady: boolean;
   progress: number;
   setOpenSettings: (openSettings: boolean) => void;
   openSettings: boolean;
@@ -31,16 +35,16 @@ interface UserModalProps {
   setIsSetup: (isSetup: boolean) => void;
 }
 
-export const UserModal = ({
-  handleDownloadModel,
-  handleDownloadTTSModel,
-  checkModelExists,
-  checkTTSModelExists,
+export const UserPrefs = ({
+  handleDownloadModel, handleDownloadTTSModel,
+  checkModelExists, checkTTSModelExists, checkSTTModelExists,
   loadModel,
   isDownloading,
   isTTSDownloading,
+  isSTTDownloading,
   isModelReady,
   isTTSModelReady,
+  isSTTModelReady,
   progress,
   openSettings,
   setOpenSettings,
@@ -53,7 +57,7 @@ export const UserModal = ({
   characterAccent,
   setCharacterAccent,
   setIsSetup
-}: UserModalProps) => {
+}: UserProps) => {
 
     const [isOpen, setIsOpen] = useState(false);
     const [alertHeader, setAlertHeader] = useState('')
@@ -85,7 +89,7 @@ export const UserModal = ({
     }, []);
 
     useEffect(() => {
-        if (!isDownloading && !isTTSDownloading && isModelReady && isTTSModelReady) {
+        if (!isDownloading && !isTTSDownloading && !isSTTDownloading && isModelReady && isTTSModelReady && isSTTModelReady) {
             setShowReadyMessage(true);
             const timer = setTimeout(() => {
                 setShowReadyMessage(false);
@@ -93,20 +97,26 @@ export const UserModal = ({
     
             return () => clearTimeout(timer);
         }
-    }, [isDownloading, isTTSDownloading, isModelReady, isTTSModelReady]);
+    }, [isDownloading, isTTSDownloading, isSTTDownloading, isModelReady, isTTSModelReady, isSTTModelReady]);
 
     useEffect(() => {
         const checkModel = async () => {
-            if (!(await checkModelExists() && await checkTTSModelExists())) {
+            if (!(await checkModelExists() && await checkTTSModelExists() && await checkSTTModelExists())) {
+                console.log('setup')
                 setAlert('I need to download my AI and speech models to function properly.');
                 setIsSetup(true);
                 setOpenSettings(true);
                 setIsOpen(true);
-            } else if (!(await checkTTSModelExists()) && (await checkModelExists())) {
-                setAlertHeader('Speech model is missing or corrupted...')
+            } else if (!(await checkTTSModelExists()) && (await checkModelExists() && await checkSTTModelExists())) {
+                setAlertHeader('My voice model is missing or corrupted...')
                 setAlert('I need to re-download the speech model to talk.')
                 setIsOpen(true);
-            } else if ((await checkTTSModelExists()) && !(await checkModelExists())) {
+            } else if (!(await checkSTTModelExists()) && (await checkModelExists() && await checkTTSModelExists())) {
+                console.log('stt')
+                setAlertHeader('Speech recognition model is missing or corrupted...')
+                setAlert('I need to re-download the speech model to talk.')
+                setIsOpen(true);
+            } else if ((await checkTTSModelExists() && await checkSTTModelExists()) && !(await checkModelExists())) {
                 setAlertHeader('AI model is missing or corrupted...')
                 setAlert('I need to re-download the AI model to function properly.')
                 setIsOpen(true);
@@ -136,7 +146,6 @@ export const UserModal = ({
                 Do not use stage directions (e.g., sigh, shrugs, laughs) in your responses.`
             });
             setAlertHeader(`Hi, ${user}!`);
-            setIsSetup(false);
         } else if (user === oldUser[0].name && (character !== oldUser[0].char || characterAccent !== oldUser[0].charAccent)) {
             setAlertHeader(`Applying requested changes...`);
             setAlert(`Hey ${user}, I need to download voice module to speak properly.`)
@@ -147,13 +156,17 @@ export const UserModal = ({
 
         // Close settings and show confirmation
         setOpenSettings(false);
+        setIsSetup(false);
         setIsOpen(true);
     };
 
     const onConfirm = async () => {
         setIsOpen(false);
         
-        if (!oldUser || !oldUser.length) {
+        const destPathSTT = `${FileSystem.documentDirectory}ggml-base.en.bin`;
+        const fileInfo = await FileSystem.getInfoAsync(destPathSTT);
+
+        if (!oldUser || !oldUser.length || !fileInfo.exists) {
             await handleDownloadModel(character, characterAccent);
         } else if (character !== oldUser[0].char || characterAccent !== oldUser[0].charAccent) {
             await handleDownloadTTSModel(character, characterAccent);
@@ -369,7 +382,14 @@ export const UserModal = ({
                     </Text>
                 </View>
             )}
-            { !isOpen && !openSettings && !isDownloading && isTTSDownloading && !isModelReady && (
+            { isSTTDownloading && (
+                <View style={styles.downloadContainer}>
+                    <Text style={styles.downloadText}>
+                        Downloading Speech-to-Text model... {progress}%
+                    </Text>
+                </View>
+            )}
+            { !isOpen && !openSettings && !isDownloading && !isTTSDownloading && !isSTTDownloading && !isModelReady && (
                 <View style={styles.downloadContainer}>
                     <Text style={styles.downloadText}>
                         Warming up gears...

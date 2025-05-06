@@ -21,19 +21,6 @@ export default function OnBoardingScreen() {
     setActiveIndex(currentIndex);
   };
 
-  // const handleSkip = async () => {
-  //   const nextIndex = activeIndex + 1;
-  //   if (nextIndex < onBoardingData.length) {
-  //     scrollViewRef.current?.scrollTo({ 
-  //       x: Dimensions.get('window').width * (onBoardingData.length - 1), animated: true 
-  //     });
-  //     setActiveIndex(nextIndex);
-  //   } else {
-  //     await AsyncStorage.setItem('onboarding', 'true');
-  //     router.push("/(routes)/home");
-  //   }
-  // };
-
   const handleSkip = async () => {
     try {
       await AsyncStorage.setItem('onboarding', 'completed'); // Save onboarding status as completed

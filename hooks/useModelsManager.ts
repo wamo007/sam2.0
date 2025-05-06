@@ -5,16 +5,19 @@ import { Alert, Platform } from "react-native";
 import { useState } from "react";
 import { downloadTTSModel } from "@/configs/DownloadTTSModel";
 import TTSManager from 'react-native-sherpa-onnx-offline-tts';
+import { downloadSTTModel } from "@/configs/DownloadSTTModel";
 
 export const useModelsManager = () => {
 
   const [progress, setProgress] = useState<number>(0);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [isTTSDownloading, setIsTTSDownloading] = useState<boolean>(false);
+  const [isSTTDownloading, setIsSTTDownloading] = useState<boolean>(false);
   const [context, setContext] = useState<any>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [isModelReady, setIsModelReady] = useState<boolean>(false);
   const [isTTSModelReady, setIsTTSModelReady] = useState<boolean>(false);
+  const [isSTTModelReady, setIsSTTModelReady] = useState<boolean>(false);
   const [chosenLang, setChosenLang] = useState<string>('uk');
 
   const modelName = 'Llama-3.2-1B-Instruct-Q4_0.gguf'
@@ -53,6 +56,20 @@ export const useModelsManager = () => {
         // console.log("File exists:", true);
         return true;
       }
+    } catch (error) {
+      console.error("Error checking file existence:", error);
+      return false;
+    }
+  };
+
+  const checkSTTModelExists = async () => {
+    try {
+      const initialFileInfo = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}ggml-base.en.bin`);
+      if (initialFileInfo.exists) {
+        console.log("File exists:", true);
+        return true;
+      }
+      console.log('not existing')
     } catch (error) {
       console.error("Error checking file existence:", error);
       return false;
@@ -101,6 +118,7 @@ export const useModelsManager = () => {
         setIsDownloading(false);
       }
     }
+    
     if (!(await checkTTSModelExists())) {
       setProgress(0);
 
@@ -116,6 +134,27 @@ export const useModelsManager = () => {
       } finally {
         setIsTTSDownloading(false);
         setIsTTSModelReady(true);
+      }
+    } else {
+      return;
+    }
+
+    if (!(await checkSTTModelExists())) {
+      setProgress(0);
+
+      setIsSTTDownloading(true);
+      try {
+        console.log('trying to download')
+        await downloadSTTModel((progress) =>
+          setProgress(progress)
+        );
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        Alert.alert("Error", `Download failed: ${errorMessage}`);
+      } finally {
+        setIsSTTDownloading(false);
+        setIsSTTModelReady(true);
       }
     } else {
       return;
@@ -197,12 +236,15 @@ export const useModelsManager = () => {
     isModelReady,
     isDownloading,
     isTTSDownloading,
+    isSTTDownloading,
     isTTSModelReady,
+    isSTTModelReady,
     progress,
     chosenLang,
     setChosenLang,
     checkModelExists,
     checkTTSModelExists,
+    checkSTTModelExists,
     handleDownloadModel,
     handleDownloadTTSModel,
     loadModel,

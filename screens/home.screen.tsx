@@ -6,11 +6,11 @@ import { useKeepAwake } from 'expo-keep-awake'
 import MessageInput from '../components/MessageInput';
 import TTSManager from 'react-native-sherpa-onnx-offline-tts';
 import { useModelsManager } from '@/hooks/useModelsManager';
-import { useVoiceRecognition } from '../hooks/useVoiceRecognition';
-import { addMessage, getMessages, removeMemories } from '@/configs/Database';
+import { useVoiceRecognition } from '../hooks/useWhisper';
+import { addMessage, getAllMessages, removeMemories } from '@/configs/Database';
 import { Message } from '@/configs/dbTypes';
 import { useSQLiteContext } from 'expo-sqlite';
-import { UserModal } from '@/components/UserModal'
+import { UserPrefs } from '@/components/UserPrefs'
 import { ChatView } from '@/components/ChatView'
 import { NoChatView } from '@/components/NoChatView'
 import { AntDesign } from '@expo/vector-icons'
@@ -33,13 +33,11 @@ export default function HomeScreen() {
     const [ttsSubscription, setTtsSubscription] = useState<EmitterSubscription | null>(null);
 
     const {
-        context,
-        isModelReady, isTTSModelReady,
-        isDownloading, isTTSDownloading,
-        progress,
+        context, progress, loadModel,
+        isModelReady, isTTSModelReady, isSTTModelReady,
+        isDownloading, isTTSDownloading, isSTTDownloading,
         handleDownloadModel, handleDownloadTTSModel,
-        checkModelExists, checkTTSModelExists,
-        loadModel,
+        checkModelExists, checkTTSModelExists, checkSTTModelExists
     } = useModelsManager();
 
     const db = useSQLiteContext();
@@ -48,10 +46,8 @@ export default function HomeScreen() {
         const fetchMessages = async () => {
             try {
                 setIsLoading(true);
-                const dbMessages = await getMessages(db);
-                if (dbMessages) {
-                    setMessages(dbMessages);
-                }
+                const dbMessages = await getAllMessages(db);
+                if (dbMessages) setMessages(dbMessages);
             } catch (error) {
                 console.error('Error fetching messages: ', error);
             } finally {
@@ -62,21 +58,7 @@ export default function HomeScreen() {
         fetchMessages();
     }, [db, isSetup]);
 
-    const cleanupTTS = () => {
-        if (ttsSubscription) {
-            ttsSubscription.remove();
-            setTtsSubscription(null);
-        }
-        
-        TTSManager.deinitialize();
-        setTtsActive(false);
-    };
-
-    const {
-        recognizing,
-        startRecognition,
-        stopRecognition,
-    } = useVoiceRecognition({
+    const { recognizing, startRecognition, stopRecognition } = useVoiceRecognition({
         onStart: () => {},
         onEnd: async (finalTranscript) => {
             if (finalTranscript.trim()) {
@@ -92,14 +74,15 @@ export default function HomeScreen() {
         onError: (error) => {
             console.log("Speech recognition error:", error);
         },
-        userAccent: userAccent
+        // userAccent: userAccent
     });
 
     const appendMessage = async (newMessage: string, isDraft: boolean = false) => {
         if (!newMessage.trim()) return;
         
         let toRemember = false;
-        if (newMessage.toLowerCase().includes('remember') || newMessage.toLowerCase().includes('memorize')) toRemember = true;
+        if (newMessage.toLowerCase().includes('remember') 
+            || newMessage.toLowerCase().includes('memorize')) toRemember = true;
 
         // Handle user message
         setMessages(prev => {
@@ -161,6 +144,7 @@ export default function HomeScreen() {
                     content: m.content,
                     toRemember: m.toRemember
                 }));
+                
                 const systemMessage = { 
                     role: 'system', 
                     content: `Your are SAM, a friendly and sarcastic ${character} companion. This is a conversation with a user - ${user}.
@@ -366,6 +350,16 @@ export default function HomeScreen() {
         await startRecognition();
     };
 
+    const cleanupTTS = () => {
+        if (ttsSubscription) {
+            ttsSubscription.remove();
+            setTtsSubscription(null);
+        }
+        
+        TTSManager.deinitialize();
+        setTtsActive(false);
+    };
+
     const forgetMemories = async () => {
         try {
             // Update messages in memory
@@ -439,11 +433,11 @@ export default function HomeScreen() {
                             
                         </View>
                         
-                        <UserModal 
-                            checkModelExists={checkModelExists} checkTTSModelExists={checkTTSModelExists}
+                        <UserPrefs 
+                            checkModelExists={checkModelExists} checkTTSModelExists={checkTTSModelExists} checkSTTModelExists={checkSTTModelExists}
                             handleDownloadTTSModel={handleDownloadTTSModel} handleDownloadModel={handleDownloadModel} loadModel={loadModel}
-                            isDownloading={isDownloading} isTTSDownloading={isTTSDownloading} progress={progress}
-                            isModelReady={isModelReady} isTTSModelReady={isTTSModelReady}
+                            isDownloading={isDownloading} isTTSDownloading={isTTSDownloading} isSTTDownloading={isSTTDownloading} progress={progress}
+                            isModelReady={isModelReady} isTTSModelReady={isTTSModelReady} isSTTModelReady={isSTTModelReady}
                             openSettings={openSettings} setOpenSettings={setOpenSettings}
                             user={user} setUser={setUser} userAccent={userAccent} setUserAccent={setUserAccent} 
                             setIsSetup={setIsSetup} character={character} setCharacter={setCharacter} characterAccent={characterAccent} setCharacterAccent={setCharacterAccent}
