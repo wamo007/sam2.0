@@ -8,7 +8,7 @@ import TTSManager from 'react-native-sherpa-onnx-offline-tts';
 import { useModelsManager } from '@/hooks/useModelsManager';
 import { useVoiceRecognition } from '../hooks/useWhisper';
 import { addMessage, getAllMessages, removeMemories } from '@/configs/Database';
-import { Message } from '@/configs/dbTypes';
+import { Message } from '@/configs/Types';
 import { useSQLiteContext } from 'expo-sqlite';
 import { UserPrefs } from '@/components/UserPrefs'
 import { ChatView } from '@/components/ChatView'
@@ -22,6 +22,7 @@ export default function HomeScreen() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
+    const [allowTranscriptUpdates, setAllowTranscriptUpdates] = useState(true);
     const [ttsActive, setTtsActive] = useState(false);
     const [talkingMode, setTalkingMode] = useState<boolean>(false);
     const [isSetup, setIsSetup] = useState(false);
@@ -58,7 +59,7 @@ export default function HomeScreen() {
         fetchMessages();
     }, [db, isSetup]);
 
-    const { recognizing, startRecognition, stopRecognition } = useVoiceRecognition({
+    const { recognizing, loadWhisperModel, startRecognition, stopRecognition } = useVoiceRecognition({
         onStart: () => {},
         onEnd: async (finalTranscript) => {
             if (finalTranscript.trim()) {
@@ -74,7 +75,7 @@ export default function HomeScreen() {
         onError: (error) => {
             console.log("Speech recognition error:", error);
         },
-        // userAccent: userAccent
+        allowUpdates: allowTranscriptUpdates,
     });
 
     const appendMessage = async (newMessage: string, isDraft: boolean = false) => {
@@ -119,7 +120,7 @@ export default function HomeScreen() {
         });
         
         if (!isDraft) {
-
+            setAllowTranscriptUpdates(false);
             setMessages(prev => prev.filter(msg => 
                 !(msg.role === 'user' && msg.isDraft)
             ));
@@ -347,6 +348,7 @@ export default function HomeScreen() {
     const handleStart = async () => {
         cleanupTTS();
         setTalkingMode(true);
+        setAllowTranscriptUpdates(true);
         await startRecognition();
     };
 
@@ -435,7 +437,7 @@ export default function HomeScreen() {
                         
                         <UserPrefs 
                             checkModelExists={checkModelExists} checkTTSModelExists={checkTTSModelExists} checkSTTModelExists={checkSTTModelExists}
-                            handleDownloadTTSModel={handleDownloadTTSModel} handleDownloadModel={handleDownloadModel} loadModel={loadModel}
+                            handleDownloadTTSModel={handleDownloadTTSModel} handleDownloadModel={handleDownloadModel} loadModel={loadModel} loadWhisperModel={loadWhisperModel}
                             isDownloading={isDownloading} isTTSDownloading={isTTSDownloading} isSTTDownloading={isSTTDownloading} progress={progress}
                             isModelReady={isModelReady} isTTSModelReady={isTTSModelReady} isSTTModelReady={isSTTModelReady}
                             openSettings={openSettings} setOpenSettings={setOpenSettings}

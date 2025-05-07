@@ -5,57 +5,21 @@ import { Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } fro
 import { scale } from 'react-native-size-matters';
 import { Dropdown } from 'react-native-element-dropdown';
 import { AntDesign } from '@expo/vector-icons';
-import { User } from '@/configs/dbTypes';
+import { User, UserProps } from '@/configs/Types';
 import * as FileSystem from 'expo-file-system';
-
-interface UserProps {
-  handleDownloadModel: (char: string, charAccent:string) => Promise<void>;
-  handleDownloadTTSModel: (char: string, charAccent:string) => Promise<void>;
-  checkModelExists: () => Promise<boolean | undefined>;
-  checkTTSModelExists: () => Promise<boolean | undefined>;
-  checkSTTModelExists: () => Promise<boolean | undefined>;
-  loadModel: () => Promise<boolean>;
-  isDownloading: boolean;
-  isTTSDownloading: boolean;
-  isSTTDownloading: boolean;
-  isModelReady: boolean;
-  isTTSModelReady: boolean;
-  isSTTModelReady: boolean;
-  progress: number;
-  setOpenSettings: (openSettings: boolean) => void;
-  openSettings: boolean;
-  user: string;
-  setUser: (user: string) => void;
-  userAccent: string;
-  setUserAccent: (accent: string) => void;
-  character: string;
-  setCharacter: (character: string) => void;
-  characterAccent: string;
-  setCharacterAccent: (characterAccent: string) => void;
-  setIsSetup: (isSetup: boolean) => void;
-}
 
 export const UserPrefs = ({
   handleDownloadModel, handleDownloadTTSModel,
   checkModelExists, checkTTSModelExists, checkSTTModelExists,
-  loadModel,
-  isDownloading,
-  isTTSDownloading,
-  isSTTDownloading,
-  isModelReady,
-  isTTSModelReady,
-  isSTTModelReady,
+  loadModel, loadWhisperModel,
+  isDownloading, isTTSDownloading, isSTTDownloading,
+  isModelReady, isTTSModelReady, isSTTModelReady,
   progress,
-  openSettings,
-  setOpenSettings,
-  user,
-  setUser,
-  userAccent,
-  setUserAccent,
-  character,
-  setCharacter,
-  characterAccent,
-  setCharacterAccent,
+  openSettings, setOpenSettings,
+  user, setUser,
+  userAccent, setUserAccent,
+  character, setCharacter,
+  characterAccent, setCharacterAccent,
   setIsSetup
 }: UserProps) => {
 
@@ -122,6 +86,7 @@ export const UserPrefs = ({
                 setIsOpen(true);
             } else {
                 await loadModel();
+                await loadWhisperModel();
             }
         };
         checkModel();

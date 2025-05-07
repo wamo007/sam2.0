@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, ScrollView, Text, StyleSheet } from 'react-native';
 import { scale } from 'react-native-size-matters';
-import { Message } from '@/configs/dbTypes';
+import { Message } from '@/configs/Types';
 
 interface ChatViewProps {
     messages: Message[];

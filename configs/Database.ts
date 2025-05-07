@@ -1,4 +1,4 @@
-import { Message, User } from '@/configs/dbTypes';
+import { Message, User } from '@/configs/Types';
 import { type SQLiteDatabase } from 'expo-sqlite';
 
 export async function migrateDbIfNeeded(db: SQLiteDatabase) {
