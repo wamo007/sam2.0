@@ -1,5 +1,5 @@
 import { Alert, Image, KeyboardAvoidingView, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 import { scale } from 'react-native-size-matters'
 import { useKeepAwake } from 'expo-keep-awake'
@@ -22,9 +22,9 @@ export default function HomeScreen() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
-    const [allowTranscriptUpdates, setAllowTranscriptUpdates] = useState(true);
     const [ttsActive, setTtsActive] = useState(false);
     const [talkingMode, setTalkingMode] = useState<boolean>(false);
+    const talkingModeRef = useRef<boolean>(false);
     const [isSetup, setIsSetup] = useState(false);
     const [openSettings, setOpenSettings] = useState<boolean>(false);
     const [user, setUser] = useState('');
@@ -59,7 +59,7 @@ export default function HomeScreen() {
         fetchMessages();
     }, [db, isSetup]);
 
-    const { recognizing, loadWhisperModel, startRecognition, stopRecognition } = useVoiceRecognition({
+    const { recognizing, allowTranscriptUpdatesRef, loadWhisperModel, startRecognition, stopRecognition } = useVoiceRecognition({
         onStart: () => {},
         onEnd: async (finalTranscript) => {
             if (finalTranscript.trim()) {
@@ -74,8 +74,7 @@ export default function HomeScreen() {
         },
         onError: (error) => {
             console.log("Speech recognition error:", error);
-        },
-        allowUpdates: allowTranscriptUpdates,
+        }
     });
 
     const appendMessage = async (newMessage: string, isDraft: boolean = false) => {
@@ -120,7 +119,7 @@ export default function HomeScreen() {
         });
         
         if (!isDraft) {
-            setAllowTranscriptUpdates(false);
+            if (allowTranscriptUpdatesRef.current) allowTranscriptUpdatesRef.current = null;
             setMessages(prev => prev.filter(msg => 
                 !(msg.role === 'user' && msg.isDraft)
             ));
@@ -254,7 +253,7 @@ export default function HomeScreen() {
                     .replace(/\s+/g, " ") 
                     .trim();
                   
-                  if (talkingMode) {
+                  if (talkingModeRef.current) {
                     try {
                         let speed = 0.8;
                         if (characterAccent === "uk" && character === "male") {
@@ -340,6 +339,7 @@ export default function HomeScreen() {
 
     const appendTextMessage = async (text: string) => {
         setTtsActive(false);
+        talkingModeRef.current = false;
         setTalkingMode(false);
         // cleanupTTS();
         await appendMessage(text, false);
@@ -347,8 +347,8 @@ export default function HomeScreen() {
 
     const handleStart = async () => {
         cleanupTTS();
+        talkingModeRef.current = true;
         setTalkingMode(true);
-        setAllowTranscriptUpdates(true);
         await startRecognition();
     };
 

@@ -15,13 +15,12 @@ type SpeechRecognitionProps = {
 
 export const useVoiceRecognition = (props: SpeechRecognitionProps) => {
   const [recognizing, setRecognizing] = useState(false);
-  const [transcriptBuffer, setTranscriptBuffer] = useState('');
+  const transcriptBufferRef = useRef<string | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const allowTranscriptUpdatesRef = useRef<boolean | null>(null);
   const whisperContextRef = useRef<WhisperContext | null>(null);
   let whisperContext = whisperContextRef.current
-  const [stopTranscribe, setStopTranscribe] = useState<{
-    stop: () => void
-  } | null>(null);
+  const stopTranscribeRef = useRef<{ stop: () => void } | null>(null);
 
   useEffect(() => () => {
     if (timeoutRef.current) {
@@ -71,12 +70,13 @@ export const useVoiceRecognition = (props: SpeechRecognitionProps) => {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;
     }
-    await stopTranscribe?.stop();
-    setStopTranscribe(null);
+    allowTranscriptUpdatesRef.current = null
+    await stopTranscribeRef.current?.stop();
+    stopTranscribeRef.current = null;
     setRecognizing(false);
-    if (transcriptBuffer) {
-      props.onEnd?.(transcriptBuffer);
-      setTranscriptBuffer('');
+    if (transcriptBufferRef.current) {
+      props.onEnd?.(transcriptBufferRef.current);
+      transcriptBufferRef.current = null;
     }
     return;
   };
@@ -90,35 +90,35 @@ export const useVoiceRecognition = (props: SpeechRecognitionProps) => {
       if (!whisperContext) await loadWhisperModel();
       if (!whisperContext) return console.log('No context')
 
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+
       const { stop, subscribe } = await whisperContext.transcribeRealtime(options);
-      setStopTranscribe({ stop });
+      stopTranscribeRef.current = { stop };
+      transcriptBufferRef.current = null;
+      allowTranscriptUpdatesRef.current = true;
       setRecognizing(true);
 
       subscribe((evt) => {
         const { data } = evt;
-        if (data?.result && recognizing) {
+        if (data?.result && allowTranscriptUpdatesRef.current) {
           const text = data.result.trim();
-          if (props.allowUpdates) {
-            setTranscriptBuffer(text);
-            props.onTranscriptUpdate?.(transcriptBuffer, true);
-
-            // Reset timeout on each update
-            if (timeoutRef.current) {
-              clearTimeout(timeoutRef.current);
-            }
-            timeoutRef.current = setTimeout(async () => await stopRecognition(), 2000);
+          transcriptBufferRef.current = text;
+          props.onTranscriptUpdate?.(text, true);
+          
+          // Reset timeout on each new transcript
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
           }
-          // if (timeoutRef.current) clearTimeout(timeoutRef.current);
-          // timeoutRef.current = setTimeout(async () => {
-          //   await stopRecognition();
-          // }, 2000);
+          timeoutRef.current = setTimeout(async () => {
+            if (allowTranscriptUpdatesRef.current) {
+              allowTranscriptUpdatesRef.current = null;
+              await stopRecognition();
+            }
+          }, 2000);
         }
-        // when the recorder actually stops capturing, end recognition
-        // if (!evt.isCapturing) {
-        //   stop();
-        //   setStopTranscribe(null);
-        //   setRecognizing(false);
-        // }
       });
 
       return true;
@@ -126,7 +126,7 @@ export const useVoiceRecognition = (props: SpeechRecognitionProps) => {
       props.onError?.(err);
       return false;
     }
-  }1;
+  };
 
-  return { loadWhisperModel, recognizing, startRecognition, stopRecognition };
+  return { loadWhisperModel, timeoutRef, recognizing, startRecognition, stopRecognition, allowTranscriptUpdatesRef };
 };
