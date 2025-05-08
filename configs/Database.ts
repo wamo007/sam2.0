@@ -25,7 +25,8 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase) {
 
       CREATE TABLE user (
           name TEXT NOT NULL,
-          accent TEXT NOT NULL,
+          trait1 TEXT NOT NULL,
+          trait2 TEXT NOT NULL,
           char TEXT NOT NULL,
           charAccent TEXT NOT NULL
       );
@@ -87,13 +88,14 @@ export const removeMemories = async (
 
 export const changeUser = async (
   db: SQLiteDatabase,
-  { name, accent, char, charAccent }: User
+  { name, trait1, trait2, char, charAccent }: User
 ) => {
   await db.runAsync('DELETE FROM user');
   return await db.runAsync(
-    'INSERT INTO user (name, accent, char, charAccent) VALUES (?, ?, ?, ?)',
+    'INSERT INTO user (name, trait1, trait2, char, charAccent) VALUES (?, ?, ?, ?, ?)',
     name,
-    accent,
+    trait1,
+    trait2,
     char,
     charAccent
   );
@@ -103,7 +105,8 @@ export const getUser = async (db: SQLiteDatabase): Promise<User[]> => {
   return (await db.getAllAsync<User>('SELECT * FROM user')).map(
     (user) => ({
       name: user.name,
-      accent: user.accent,
+      trait1: user.trait1,
+      trait2: user.trait2,
       char: user.char,
       charAccent: user.charAccent
     })

@@ -42,16 +42,6 @@
           "backgroundColor": "#031622"
         }
       ],
-      [
-        "expo-speech-recognition",
-        {
-          "microphonePermission": "Allow SAM to use the microphone.",
-          "speechRecognitionPermission": "Allow SAM to use speech recognition.",
-          "androidSpeechServicePackages": [
-            "com.google.android.googlequicksearchbox"
-          ]
-        }
-      ],
       "expo-dev-client",
       "expo-sqlite"
     ],

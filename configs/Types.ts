@@ -7,7 +7,8 @@ export type Message = {
 
 export type User = {
   name: string;
-  accent: string;
+  trait1: string;
+  trait2: string;
   char: string;
   charAccent: string;
 }
@@ -31,11 +32,24 @@ export interface UserProps {
   openSettings: boolean;
   user: string;
   setUser: (user: string) => void;
-  userAccent: string;
-  setUserAccent: (accent: string) => void;
+  traits: {
+      trait1: string;
+      trait2: string;
+  };
+  setTraits: (traits: { trait1: string; trait2: string }) => void;
   character: string;
   setCharacter: (character: string) => void;
   characterAccent: string;
   setCharacterAccent: (characterAccent: string) => void;
   setIsSetup: (isSetup: boolean) => void;
+}
+
+export interface Traits {
+  trait1: string;
+  trait2: string;
+}
+
+export interface TraitOption {
+  label: string;
+  value: string;
 }

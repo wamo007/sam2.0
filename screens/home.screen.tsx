@@ -8,7 +8,7 @@ import TTSManager from 'react-native-sherpa-onnx-offline-tts';
 import { useModelsManager } from '@/hooks/useModelsManager';
 import { useVoiceRecognition } from '../hooks/useWhisper';
 import { addMessage, getAllMessages, removeMemories } from '@/configs/Database';
-import { Message } from '@/configs/Types';
+import { Message, Traits } from '@/configs/Types';
 import { useSQLiteContext } from 'expo-sqlite';
 import { UserPrefs } from '@/components/UserPrefs'
 import { ChatView } from '@/components/ChatView'
@@ -28,7 +28,10 @@ export default function HomeScreen() {
     const [isSetup, setIsSetup] = useState(false);
     const [openSettings, setOpenSettings] = useState<boolean>(false);
     const [user, setUser] = useState('');
-    const [userAccent, setUserAccent] = useState('');
+    const [traits, setTraits] = useState<Traits>({
+        trait1: '',
+        trait2: ''
+    });
     const [character, setCharacter] = useState('');
     const [characterAccent, setCharacterAccent] = useState('');
     const [ttsSubscription, setTtsSubscription] = useState<EmitterSubscription | null>(null);
@@ -147,7 +150,7 @@ export default function HomeScreen() {
                 
                 const systemMessage = { 
                     role: 'system', 
-                    content: `Your are SAM, a friendly and sarcastic ${character} companion. This is a conversation with a user - ${user}.
+                    content: `Your are SAM, a ${traits.trait1} and ${traits.trait2} ${character} companion. This is a conversation with a user - ${user}.
                     Please respond clearly and concisely, using no more than 3 sentences per answer.
                     Do not repeat or paraphrase ${user}'s input.
                     Do not use stage directions (e.g., sigh, shrugs, laughs) in your responses.` 
@@ -441,7 +444,7 @@ export default function HomeScreen() {
                             isDownloading={isDownloading} isTTSDownloading={isTTSDownloading} isSTTDownloading={isSTTDownloading} progress={progress}
                             isModelReady={isModelReady} isTTSModelReady={isTTSModelReady} isSTTModelReady={isSTTModelReady}
                             openSettings={openSettings} setOpenSettings={setOpenSettings}
-                            user={user} setUser={setUser} userAccent={userAccent} setUserAccent={setUserAccent} 
+                            user={user} setUser={setUser} traits={traits} setTraits={setTraits} 
                             setIsSetup={setIsSetup} character={character} setCharacter={setCharacter} characterAccent={characterAccent} setCharacterAccent={setCharacterAccent}
                         />
 

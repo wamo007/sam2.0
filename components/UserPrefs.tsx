@@ -17,7 +17,7 @@ export const UserPrefs = ({
   progress,
   openSettings, setOpenSettings,
   user, setUser,
-  userAccent, setUserAccent,
+  traits, setTraits,
   character, setCharacter,
   characterAccent, setCharacterAccent,
   setIsSetup
@@ -40,7 +40,10 @@ export const UserPrefs = ({
                 if (dbUser && dbUser.length > 0) {
                     setOldUser(dbUser);
                     setUser(dbUser[0].name);
-                    setUserAccent(dbUser[0].accent);
+                    setTraits({
+                        trait1: dbUser[0].trait1,
+                        trait2: dbUser[0].trait2
+                    });
                     setCharacter(dbUser[0].char);
                     setCharacterAccent(dbUser[0].charAccent);
                 };
@@ -64,39 +67,56 @@ export const UserPrefs = ({
     }, [isDownloading, isTTSDownloading, isSTTDownloading, isModelReady, isTTSModelReady, isSTTModelReady]);
 
     useEffect(() => {
-        const checkModel = async () => {
-            if (!(await checkModelExists() && await checkTTSModelExists() && await checkSTTModelExists())) {
-                console.log('setup')
-                setAlert('I need to download my AI and speech models to function properly.');
-                setIsSetup(true);
-                setOpenSettings(true);
+        const checkAndLoadModels = async () => {
+            try {
+                const [modelExists, ttsExists, sttExists] = await Promise.all([
+                    checkModelExists(),
+                    checkTTSModelExists(),
+                    checkSTTModelExists()
+                ]);
+
+                if (!modelExists || !ttsExists || !sttExists) {
+                    if (!modelExists && !ttsExists && !sttExists) {
+                        setAlert('I need to download my AI and speech models to function properly.');
+                        setIsSetup(true);
+                    } else if (!ttsExists) {
+                        setAlertHeader('My voice model is missing or corrupted...');
+                        setAlert('I need to re-download the speech model to talk.');
+                    } else if (!sttExists) {
+                        setAlertHeader('Speech recognition model is missing or corrupted...');
+                        setAlert('I need to re-download the speech model to talk.');
+                    } else if (!modelExists) {
+                        setAlertHeader('AI model is missing or corrupted...');
+                        setAlert('I need to re-download the AI model to function properly.');
+                    }
+                    
+                    setOpenSettings(true);
+                    setIsOpen(true);
+                    return;
+                }
+
+                await Promise.all([
+                    loadModel(),
+                    loadWhisperModel()
+                ]);
+                
+            } catch (error) {
+                console.error('Error checking/loading models:', error);
+                setAlertHeader('Error');
+                setAlert('Failed to initialize models. Please try again.');
                 setIsOpen(true);
-            } else if (!(await checkTTSModelExists()) && (await checkModelExists() && await checkSTTModelExists())) {
-                setAlertHeader('My voice model is missing or corrupted...')
-                setAlert('I need to re-download the speech model to talk.')
-                setIsOpen(true);
-            } else if (!(await checkSTTModelExists()) && (await checkModelExists() && await checkTTSModelExists())) {
-                console.log('stt')
-                setAlertHeader('Speech recognition model is missing or corrupted...')
-                setAlert('I need to re-download the speech model to talk.')
-                setIsOpen(true);
-            } else if ((await checkTTSModelExists() && await checkSTTModelExists()) && !(await checkModelExists())) {
-                setAlertHeader('AI model is missing or corrupted...')
-                setAlert('I need to re-download the AI model to function properly.')
-                setIsOpen(true);
-            } else {
-                await loadModel();
-                await loadWhisperModel();
             }
         };
-        checkModel();
+
+        checkAndLoadModels();
     }, []);
 
     const onSubmit = async () => {
         // First update the user in database
         await changeUser(db, {
             name: user,
-            accent: userAccent,
+            trait1: traits.trait1,
+            trait2: traits.trait2,
             char: character,
             charAccent: characterAccent
         });
@@ -105,7 +125,7 @@ export const UserPrefs = ({
         if (!oldUser || !oldUser.length || user !== oldUser[0].name) {
             await addMessage(db, {
                 role: 'system',
-                content: `Your are SAM, a friendly and sarcastic ${character} companion. This is a conversation with a user - ${user}.
+                content: `Your are SAM, a ${traits.trait1} and ${traits.trait2} ${character} companion. This is a conversation with a user - ${user}.
                 Please respond clearly and concisely, using no more than 3 sentences per answer.
                 Do not repeat or paraphrase ${user}'s input.
                 Do not use stage directions (e.g., sigh, shrugs, laughs) in your responses.`
@@ -183,39 +203,42 @@ export const UserPrefs = ({
       );
     };
 
-    const usrAccent = [
-        { label: 'US', value: 'en-US' },
-        { label: 'UK', value: 'en-GB' },
-        { label: 'Australia', value: 'en-AU' },
-        { label: 'Canada', value: 'en-CA' },
-        { label: 'Ghana', value: 'en-GH' },
-        { label: 'Hong Kong', value: 'en-HK' },
-        { label: 'India', value: 'en-IN' },
-        { label: 'Ireland', value: 'en-IE' },
-        { label: 'Kenya', value: 'en-KE' },
-        { label: 'New Zealandia', value: 'en-NZ' },
-        { label: 'Nigeria', value: 'en-NG' },
-        { label: 'Pakistan', value: 'en-PK' },
-        { label: 'Philippines', value: 'en-PH' },
-        { label: 'Singapore', value: 'en-SG' },
-        { label: 'South Africa', value: 'en-ZA' },
-        { label: 'Tanzania', value: 'en-TZ' },
-    ]
+    const trait1Options = [
+        { label: 'Friendly', value: 'friendly' },
+        { label: 'Warm', value: 'warm' },
+        { label: 'Kind', value: 'kind' },
+        { label: 'Caring', value: 'caring' },
+        { label: 'Cheerful', value: 'cheerful' },
+        { label: 'Supportive', value: 'supportive' },
+        { label: 'Empathetic', value: 'empathetic' },
+        { label: 'Gentle', value: 'gentle' },
+    ];
 
-    const renderUsrAccent = (item: any) => {
-      return (
-        <View style={styles.item}>
-          <Text style={styles.textItem}>{item.label}</Text>
-          {item.value === userAccent && (
-            <AntDesign
-              style={styles.icon}
-              color="white"
-              name="checksquareo"
-              size={20}
-            />
-          )}
-        </View>
-      );
+    const trait2Options = [
+        { label: 'Sarcastic', value: 'sarcastic' },
+        { label: 'Witty', value: 'witty' },
+        { label: 'Playful', value: 'playful' },
+        { label: 'Clever', value: 'clever' },
+        { label: 'Humorous', value: 'humorous' },
+        { label: 'Quick-witted', value: 'quick-witted' },
+        { label: 'Ironic', value: 'ironic' },
+        { label: 'Sharp', value: 'sharp' },
+    ];
+
+    const renderTraitItem = (item: any) => {
+        return (
+            <View style={styles.item}>
+                <Text style={styles.textItem}>{item.label}</Text>
+                {(item.value === traits.trait1 || item.value === traits.trait2) && (
+                    <AntDesign
+                        style={styles.icon}
+                        color="white"
+                        name="checksquareo"
+                        size={20}
+                    />
+                )}
+            </View>
+        );
     };
 
     const content = openSettings ? (
@@ -240,27 +263,7 @@ export const UserPrefs = ({
                     />
                 </View>
                 <View>
-                    <Text style={styles.label}>Choose your english pronunciation:</Text>
-                    <Dropdown
-                        style={styles.dropdown}
-                        placeholderStyle={styles.placeholderStyle}
-                        selectedTextStyle={styles.selectedTextStyle}
-                        iconStyle={styles.iconStyle}
-                        data={usrAccent}
-                        maxHeight={300}
-                        labelField="label"
-                        valueField="value"
-                        placeholder="Pronunciation"
-                        searchPlaceholder="Search..."
-                        value={userAccent}
-                        onChange={item => {
-                            setUserAccent(item.value);
-                        }}
-                        renderItem={renderUsrAccent}
-                    />
-                </View>
-                <View>
-                    <Text style={styles.label}>Choose character's voice:</Text>
+                    <Text style={styles.label}>Choose SAM's voice:</Text>
                     <Dropdown
                         style={styles.dropdown}
                         placeholderStyle={styles.placeholderStyle}
@@ -280,7 +283,7 @@ export const UserPrefs = ({
                     />
                 </View>
                 <View>
-                    <Text style={styles.label}>Choose character's accent:</Text>
+                    <Text style={styles.label}>Choose SAM's accent:</Text>
                     <Dropdown
                         style={styles.dropdown}
                         placeholderStyle={styles.placeholderStyle}
@@ -298,6 +301,56 @@ export const UserPrefs = ({
                         }}
                         renderItem={renderCharAccent}
                     />
+                </View>
+                
+                <View>
+                    <Text style={styles.label}>Choose SAM's traits:</Text>
+                    <View style={styles.traits}>
+                        <Dropdown
+                            style={[
+                                styles.dropdown, {flex: 1, minWidth: '48%'}
+                            ]}
+                            placeholderStyle={styles.placeholderStyle}
+                            selectedTextStyle={styles.selectedTextStyle}
+                            iconStyle={styles.iconStyle}
+                            data={trait1Options}
+                            maxHeight={300}
+                            labelField="label"
+                            valueField="value"
+                            placeholder="1st trait"
+                            searchPlaceholder="Search..."
+                            value={traits.trait1}
+                            onChange={item => {
+                                setTraits({
+                                    trait1: item.value,
+                                    trait2: traits.trait2
+                                });
+                            }}
+                            renderItem={renderTraitItem}
+                        />
+                        <Dropdown
+                            style={[
+                                styles.dropdown, {flex: 1, minWidth: '48%'}
+                            ]}
+                            placeholderStyle={styles.placeholderStyle}
+                            selectedTextStyle={styles.selectedTextStyle}
+                            iconStyle={styles.iconStyle}
+                            data={trait2Options}
+                            maxHeight={300}
+                            labelField="label"
+                            valueField="value"
+                            placeholder="2nd trait"
+                            searchPlaceholder="Search..."
+                            value={traits.trait2}
+                            onChange={item => {
+                                setTraits({
+                                    trait1: traits.trait1,
+                                    trait2: item.value
+                                });
+                            }}
+                            renderItem={renderTraitItem}
+                        />
+                    </View>
                 </View>
             </View>
             <TouchableOpacity 
@@ -486,6 +539,11 @@ const styles = StyleSheet.create({
       shadowOpacity: 0.2,
       shadowRadius: 1.41,
       elevation: 2,
+    },
+    traits: {
+      flexDirection: 'row',
+      gap: scale(10),
+      width: '100%'
     },
     icon: {
       marginRight: 5,
