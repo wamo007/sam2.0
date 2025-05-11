@@ -22,6 +22,7 @@ export default function HomeScreen() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState<boolean>(false);
+    const [isThinking, setIsThinking] = useState<boolean>(false);
     const [ttsActive, setTtsActive] = useState(false);
     const [talkingMode, setTalkingMode] = useState<boolean>(false);
     const talkingModeRef = useRef<boolean>(false);
@@ -172,6 +173,7 @@ export default function HomeScreen() {
                 }
                 
                 setIsGenerating(true);
+                setIsThinking(true);
 
                 try {
                   const stopWords = [
@@ -212,7 +214,7 @@ export default function HomeScreen() {
                     {
                       messages: newConversation,
                       n_predict: 90,
-                      temperature: 0.5,
+                      temperature: 0.7,
                       top_p: 0.9,
                       stop: stopWords,
                     },
@@ -237,7 +239,7 @@ export default function HomeScreen() {
                         const lastIndex = prev.length - 1;
                         const updated = [...prev];
                         updated[lastIndex].content = visibleContent;
-                        updated[lastIndex].isDraft = false; // Keep as draft until complete
+                        updated[lastIndex].isDraft = false;
                         return updated;
                       });
                     }
@@ -256,6 +258,8 @@ export default function HomeScreen() {
                     .replace(/\s+/g, " ") 
                     .trim();
                   
+                  setIsThinking(false);
+
                   if (talkingModeRef.current) {
                     try {
                         let speed = 0.8;
@@ -452,7 +456,7 @@ export default function HomeScreen() {
                             <ChatView messages={messages} isLoading={isLoading} /> 
                         }
                         { !keyboardEnabled && !openSettings &&
-                            <NoChatView ttsActive={ttsActive} character={character} />
+                            <NoChatView ttsActive={ttsActive} character={character} isThinking={isThinking} />
                         }
 
                     </View>

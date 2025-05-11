@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, ScrollView, Text, StyleSheet } from 'react-native';
+import { View, ScrollView, Text, StyleSheet, Image } from 'react-native';
 import { scale } from 'react-native-size-matters';
 import { Message } from '@/configs/Types';
 
@@ -33,9 +33,16 @@ export const ChatView = ({ messages, isLoading }: ChatViewProps) => {
                         return (
                             <View key={index} style={styles.assistantMessageContainer}>
                                 <View style={styles.assistantMessage}>
-                                    <Text style={styles.assistantMessageText}>
-                                        {message.content}
-                                    </Text>
+                                    { message.content === "" 
+                                        ? <Image 
+                                            source={require('../assets/images/Typing.gif')}
+                                            style={styles.assistantBuble}
+                                            resizeMode="contain"
+                                        />
+                                        : <Text style={styles.assistantMessageText}>
+                                            {message.content}
+                                        </Text>
+                                    }
                                 </View>
                             </View>
                         )
@@ -78,6 +85,11 @@ const styles = StyleSheet.create({
         borderRadius: scale(8),
         padding: scale(7),
         borderBottomLeftRadius: 0,
+    },
+    assistantBuble: {
+        width: scale(20),
+        height: scale(20),
+        padding: 0,
     },
     assistantMessageText: {
         color: '#F9FAFB',

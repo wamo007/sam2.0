@@ -5,6 +5,7 @@ import { scale } from 'react-native-size-matters';
 interface NoChatViewProps {
     ttsActive: boolean;
     character: string;
+    isThinking: boolean;
 }
 
 const characterImages = {
@@ -18,7 +19,7 @@ const characterImages = {
     }
 };
 
-export const NoChatView = memo(({ ttsActive, character }: NoChatViewProps) => {
+export const NoChatView = memo(({ ttsActive, character, isThinking }: NoChatViewProps) => {
     const selectedCharacter = character || 'female';
 
     const currentImage = useMemo(() => {
@@ -29,6 +30,13 @@ export const NoChatView = memo(({ ttsActive, character }: NoChatViewProps) => {
 
     return (
         <View style={styles.header}>
+            { isThinking &&
+                <Image 
+                    source={require('../assets/images/Thinking.gif')}
+                    style={styles.bubble}
+                    resizeMode="contain"
+                />
+            }
             <Image 
                 key={`${selectedCharacter}-${ttsActive}`}
                 source={currentImage}
@@ -41,9 +49,16 @@ export const NoChatView = memo(({ ttsActive, character }: NoChatViewProps) => {
 
 const styles = StyleSheet.create({
     header: {
+        position: 'relative',
         flexDirection: 'row',
         justifyContent: 'center',
         bottom: '-15%'
+    },
+    bubble: {
+        position: 'absolute',
+        right: scale(40),
+        top: scale(30),
+        height: scale(30),
     },
     headerImage: {
         height: scale(350),
