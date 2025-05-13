@@ -1,6 +1,6 @@
 import { memo, useMemo } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
-import { scale } from 'react-native-size-matters';
+import { scale, isTabletDevice } from '@/configs/Dimensions'
 
 interface NoChatViewProps {
     ttsActive: boolean;
@@ -41,6 +41,7 @@ export const NoChatView = memo(({ ttsActive, character, isThinking }: NoChatView
                 key={`${selectedCharacter}-${ttsActive}`}
                 source={currentImage}
                 style={styles.headerImage}
+                resizeMode="contain"
                 fadeDuration={0}
             />
         </View>
@@ -63,5 +64,6 @@ const styles = StyleSheet.create({
     headerImage: {
         height: scale(350),
         width: scale(350),
+        alignSelf: 'center'
     },
 });

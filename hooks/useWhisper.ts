@@ -25,9 +25,16 @@ export const useVoiceRecognition = (props: SpeechRecognitionProps) => {
   useEffect(() => () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
     }
-    whisperContextRef.current?.release()
-    whisperContextRef.current = null
+    if (stopTranscribeRef.current) {
+      stopTranscribeRef.current.stop();
+      stopTranscribeRef.current = null;
+    }
+    if (whisperContextRef.current) {
+      whisperContextRef.current.release();
+      whisperContextRef.current = null;
+    }
   }, [])
 
   const destModelPath = `${FileSystem.documentDirectory}ggml-base.en.bin`;
@@ -60,7 +67,7 @@ export const useVoiceRecognition = (props: SpeechRecognitionProps) => {
 
       return true;
     } catch (err) {
-      props.onError?.(err);
+      props.onError?.(`Model not loaded: ${err}`);
       throw err;
     }
   };
@@ -123,7 +130,7 @@ export const useVoiceRecognition = (props: SpeechRecognitionProps) => {
 
       return true;
     } catch (err) {
-      props.onError?.(err);
+      props.onError?.(`Whisper not starting: ${err}`);
       return false;
     }
   };

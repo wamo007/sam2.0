@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, ScrollView, Text, StyleSheet, Image } from 'react-native';
-import { scale } from 'react-native-size-matters';
+import { scale, verticalScale, isTabletDevice } from '@/configs/Dimensions'
 import { Message } from '@/configs/Types';
 
 interface ChatViewProps {
@@ -69,7 +69,10 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(30, 41, 59, 0.8)',
         borderRadius: scale(8),
         padding: scale(4),
-        maxHeight: '100%'
+        maxHeight: '100%',
+        maxWidth: isTabletDevice ? 800 : undefined,
+        alignSelf: 'center',
+        width: '100%'
     },
     scrollView: {
         margin: scale(5),
@@ -80,7 +83,7 @@ const styles = StyleSheet.create({
         marginVertical: scale(5),
     },
     assistantMessage: {
-        maxWidth: scale(240),
+        maxWidth: isTabletDevice ? scale(400) : scale(240),
         backgroundColor: 'rgb(8, 16, 36)',
         borderRadius: scale(8),
         padding: scale(7),
@@ -93,6 +96,7 @@ const styles = StyleSheet.create({
     },
     assistantMessageText: {
         color: '#F9FAFB',
+        fontSize: isTabletDevice ? scale(14) : scale(16),
     },
     userMessageContainer: {
         flexDirection: 'row',
@@ -100,7 +104,7 @@ const styles = StyleSheet.create({
         marginVertical: scale(5),
     },
     userMessage: {
-        maxWidth: scale(240),
+        maxWidth: isTabletDevice ? scale(400) : scale(240),
         backgroundColor: 'rgb(5, 153, 179)',
         borderRadius: scale(8),
         padding: scale(7),
@@ -109,6 +113,7 @@ const styles = StyleSheet.create({
     userMessageText: {
         color: '#FFFFFF',
         textAlign: 'left',
+        fontSize: isTabletDevice ? scale(14) : scale(16),
     },
     loadingContainer: {
         flex: 1,

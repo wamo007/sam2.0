@@ -13,7 +13,8 @@
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow SAM to use speech recognition.",
         "NSMicrophoneUsageDescription": "Allow SAM to use the microphone."
-      }
+      },
+      "bundleIdentifier": "com.shamo.sam"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +22,6 @@
         "backgroundColor": "#031622"
       },
       "permissions": [
-        "android.permission.RECORD_AUDIO",
         "android.permission.RECORD_AUDIO"
       ],
       "package": "com.shamo.sam"

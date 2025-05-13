@@ -43,7 +43,8 @@
     "react-native-sherpa-onnx-offline-tts": "^0.2.2",
     "react-native-size-matters": "^0.4.2",
     "react-native-zip-archive": "^7.0.1",
-    "whisper.rn": "^0.3.9"
+    "whisper.rn": "^0.3.9",
+    "expo-system-ui": "~4.0.9"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

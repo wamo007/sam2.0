@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, StatusBar, Image, ScrollView, NativeSyntheticEvent, NativeScrollEvent, Dimensions, Pressable } from 'react-native'
 import React, { useRef, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
-import { scale, verticalScale } from 'react-native-size-matters'
+import { scale, verticalScale } from '@/configs/Dimensions'
 import { onBoardingData } from '@/constants/OnboardingPages'
 import type { onBoardingDataType, TextSegment } from '@/constants/OnboardingPages'
 import AntDesign from '@expo/vector-icons/AntDesign'

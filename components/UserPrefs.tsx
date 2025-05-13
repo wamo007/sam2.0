@@ -2,7 +2,7 @@ import { addMessage, changeUser, getUser } from '@/configs/Database';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { scale } from 'react-native-size-matters';
+import { scale } from '@/configs/Dimensions';
 import { Dropdown } from 'react-native-element-dropdown';
 import { AntDesign } from '@expo/vector-icons';
 import { User, UserProps } from '@/configs/Types';
@@ -314,7 +314,7 @@ export const UserPrefs = ({
                             selectedTextStyle={styles.selectedTextStyle}
                             iconStyle={styles.iconStyle}
                             data={trait1Options}
-                            maxHeight={300}
+                            maxHeight={scale(300)}
                             dropdownPosition='top'
                             labelField="label"
                             valueField="value"
@@ -337,7 +337,7 @@ export const UserPrefs = ({
                             selectedTextStyle={styles.selectedTextStyle}
                             iconStyle={styles.iconStyle}
                             data={trait2Options}
-                            maxHeight={300}
+                            maxHeight={scale(300)}
                             dropdownPosition='top'
                             labelField="label"
                             valueField="value"

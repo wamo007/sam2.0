@@ -1,7 +1,8 @@
 import { Alert, Image, KeyboardAvoidingView, Platform, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import { useEffect, useRef, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
-import { scale } from 'react-native-size-matters'
+// import { scale } from 'react-native-size-matters'
+import { scale, verticalScale, isTabletDevice } from '@/configs/Dimensions'
 import { useKeepAwake } from 'expo-keep-awake'
 import MessageInput from '../components/MessageInput';
 import TTSManager from 'react-native-sherpa-onnx-offline-tts';
@@ -355,6 +356,7 @@ export default function HomeScreen() {
     const handleStart = async () => {
         cleanupTTS();
         talkingModeRef.current = true;
+        setIsGenerating(false);
         setTalkingMode(true);
         await startRecognition();
     };
@@ -412,7 +414,8 @@ export default function HomeScreen() {
                                             onPress={() => setOpenSettings(false)}
                                             style={{
                                                 padding: 10,  // Add padding around the icon
-                                                marginRight: -10  // Offset the padding to maintain visual position
+                                                marginRight: -10,  // Offset the padding to maintain visual position
+                                                marginTop: -6
                                             }}
                                             hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
                                         >
@@ -426,7 +429,8 @@ export default function HomeScreen() {
                                             onPress={() => setOpenSettings(true)}
                                             style={{
                                                 padding: 10,  // Add padding around the icon
-                                                marginRight: -10  // Offset the padding to maintain visual position
+                                                marginRight: -10,  // Offset the padding to maintain visual position
+                                                marginTop: -6
                                             }}
                                         >
                                             <AntDesign 
@@ -505,7 +509,6 @@ export default function HomeScreen() {
                         { !recognizing ? (
                             <TouchableOpacity 
                                 onPress={handleStart}
-                                disabled={isGenerating}
                             >
                                 <Image 
                                     style={[
@@ -542,19 +545,22 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'stretch',
         backgroundColor: '#131313',
-        paddingTop: scale(10),
-        paddingHorizontal: scale(20),
+        paddingTop: verticalScale(10),
+        paddingHorizontal: isTabletDevice ? scale(40) : scale(20),
     },
     mainContainer: {
         flex: 1,
         flexDirection: 'column',
-        marginTop: scale(30),
+        marginTop: verticalScale(30),
         position: 'relative',
-        maxHeight: '100%'
+        maxHeight: '100%',
+        maxWidth: isTabletDevice ? 800 : '100%',
+        alignSelf: 'center',
+        width: '100%'
     },
     messagesContainer: {
         flex: 1,
-        marginTop: scale(5),
+        marginTop: verticalScale(5),
         position: 'relative',
     },
     navBar: {
@@ -618,8 +624,8 @@ const styles = StyleSheet.create({
     },
     microphone: {
         borderRadius: scale(8),
-        width: scale(60),
-        height: scale(60),
+        width: isTabletDevice ? scale(50) : scale(60),
+        height: isTabletDevice ? scale(50) : scale(60),
     },
     loadingContainer: {
         flex: 1,

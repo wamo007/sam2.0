@@ -25,7 +25,7 @@ export const onBoardingData:onBoardingDataType[] = [
             color: '#fff',
             margin: scale(10),
         },
-        description: 'Smart Adaptive Mind',
+        description: 'Secure AI Mate',
         image: require('../assets/images/sam-female.png'),
     },
     {
