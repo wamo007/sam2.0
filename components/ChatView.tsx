@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     },
     assistantMessageText: {
         color: '#F9FAFB',
-        fontSize: isTabletDevice ? scale(14) : scale(16),
+        // fontSize: isTabletDevice ? scale(14) : scale(16),
     },
     userMessageContainer: {
         flexDirection: 'row',
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
     userMessageText: {
         color: '#FFFFFF',
         textAlign: 'left',
-        fontSize: isTabletDevice ? scale(14) : scale(16),
+        // fontSize: isTabletDevice ? scale(14) : scale(16),
     },
     loadingContainer: {
         flex: 1,
