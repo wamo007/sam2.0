@@ -4,7 +4,7 @@ import { downloadModel } from "@/configs/DownloadModel";
 import { Alert, Platform } from "react-native";
 import { useState } from "react";
 import { downloadTTSModel } from "@/configs/DownloadTTSModel";
-import TTSManager from 'react-native-sherpa-onnx-offline-tts';
+import TTSManager from 'my-package-wamo';
 import { downloadSTTModel } from "@/configs/DownloadSTTModel";
 
 export const useModelsManager = () => {

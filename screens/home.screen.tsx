@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { scale, verticalScale, isTabletDevice } from '@/configs/Dimensions'
 import { useKeepAwake } from 'expo-keep-awake'
 import MessageInput from '../components/MessageInput';
-import TTSManager from 'react-native-sherpa-onnx-offline-tts';
+import TTSManager from 'my-package-wamo';
 import { useModelsManager } from '@/hooks/useModelsManager';
 import { useVoiceRecognition } from '../hooks/useWhisper';
 import { addMessage, getAllMessages, removeMemories } from '@/configs/Database';

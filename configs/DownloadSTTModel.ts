@@ -32,7 +32,7 @@ export const downloadSTTModel = async (
 
     const downloadResumable = FileSystem.createDownloadResumable(
       `https://huggingface.co/shamil010/mymodel/resolve/main/ggml-base.bin`,
-      destPathSTTEncoderZip,
+      destPathSTT,
       {},
       (downloadProgress) => {
         const progress = 
@@ -45,7 +45,7 @@ export const downloadSTTModel = async (
     
     const downloadResumableEncoder = FileSystem.createDownloadResumable(
       `https://huggingface.co/shamil010/mymodel/resolve/main/ggml-base-encoder.mlmodelc.zip`,
-      destPathSTT,
+      destPathSTTEncoderZip,
       {},
       (downloadProgress) => {
         const progress = 
@@ -56,13 +56,17 @@ export const downloadSTTModel = async (
   
     const downloadResultEncoder = await downloadResumableEncoder.downloadAsync();
 
-    await unzip(destPathSTTEncoderZip, destPathSTTEncoder);
-    await RNFS.unlink(destPathSTTEncoderZip);
     
-    if (Platform.OS === 'ios' && downloadResultEncoder?.uri) {
-      destPathSTTEncoderZip
-    } else {
-      throw new Error(`Download failed: No TTS coreml model returned`);
+    
+    if (Platform.OS === 'ios') {
+      if (downloadResultEncoder?.uri) {
+        await unzip(destPathSTTEncoderZip, destPathSTTEncoder);
+        await RNFS.unlink(destPathSTTEncoderZip);
+
+        destPathSTTEncoderZip
+      } else {
+        throw new Error(`Download failed: No TTS coreml model returned`);
+      }
     }
 
     if (downloadResult?.uri) {
