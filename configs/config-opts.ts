@@ -4,11 +4,11 @@ import * as FileSystem from 'expo-file-system';
 const getCoreMLModelAsset = () =>
   Platform.OS === 'ios'
     ? {
-        filename: 'ggml-base.en-encoder.mlmodelc',
+        filename: 'ggml-base-encoder.mlmodelc',
         assets: [
-          `${FileSystem.documentDirectory}ggml-base.en-encoder.mlmodelc/weights/weight.bin`,
-          `${FileSystem.documentDirectory}ggml-base.en-encoder.mlmodelc/model.mil`,
-          `${FileSystem.documentDirectory}ggml-base.en-encoder.mlmodelc/coremldata.bin`,
+          `${FileSystem.documentDirectory}ggml-base-encoder.mlmodelc/weights/weight.bin`,
+          `${FileSystem.documentDirectory}ggml-base-encoder.mlmodelc/model.mil`,
+          `${FileSystem.documentDirectory}ggml-base-encoder.mlmodelc/coremldata.bin`,
         ],
       }
     : undefined

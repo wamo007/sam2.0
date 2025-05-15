@@ -64,7 +64,7 @@ export const useModelsManager = () => {
 
   const checkSTTModelExists = async () => {
     try {
-      const initialFileInfo = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}ggml-base.en.bin`);
+      const initialFileInfo = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}ggml-base.bin`);
       if (initialFileInfo.exists) {
         console.log("File exists:", true);
         return true;
@@ -216,6 +216,9 @@ export const useModelsManager = () => {
         use_mlock: true,
         n_ctx: 2048,
         n_gpu_layers: Platform.OS === 'ios' ? 99 : 0,
+      }).catch(err => {
+        console.log("Error initializing Llama:", err);
+        throw new Error("Failed to initialize Llama");
       });
       setContext(llamaContext);
       // Alert.alert("Model Loaded", "The model was successfully loaded.");

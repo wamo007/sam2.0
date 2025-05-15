@@ -4,6 +4,7 @@ import { AudioSessionIos, initWhisper } from 'whisper.rn';
 import type { WhisperContext } from 'whisper.rn';
 import * as FileSystem from 'expo-file-system';
 import { PermissionsAndroid } from 'react-native';
+import configOpts from '@/configs/config-opts';
 
 type SpeechRecognitionProps = {
   onStart?: () => void;
@@ -37,7 +38,7 @@ export const useVoiceRecognition = (props: SpeechRecognitionProps) => {
     }
   }, [])
 
-  const destModelPath = `${FileSystem.documentDirectory}ggml-base.en.bin`;
+  const destModelPath = `${FileSystem.documentDirectory}ggml-base.bin`;
   const options = {
     maxLen: 1,
     language: 'en',
@@ -61,7 +62,9 @@ export const useVoiceRecognition = (props: SpeechRecognitionProps) => {
         await whisperContext.release()
         whisperContextRef.current = null
       }
-      const ctx = await initWhisper({ filePath: destModelPath });
+      const ctx = await initWhisper({ filePath: destModelPath,
+        ...{},
+       });
       whisperContextRef.current = ctx
       whisperContext = whisperContextRef.current
 

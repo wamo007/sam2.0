@@ -9,7 +9,7 @@ export const downloadSTTModel = async (
   onProgress: (progress: number) => void
 ): Promise<string> => {
   
-  const destPathSTT = `${FileSystem.documentDirectory}ggml-base.en.bin`;
+  const destPathSTT = `${FileSystem.documentDirectory}ggml-base.bin`;
   const destPathSTTEncoder = `${FileSystem.documentDirectory}ggml-base-encoder.mlmodelc`;
   const destPathSTTEncoderZip = `${FileSystem.documentDirectory}ggml-base-encoder.mlmodelc.zip`;
   // const modelsPath = `${FileSystem.documentDirectory}models`
