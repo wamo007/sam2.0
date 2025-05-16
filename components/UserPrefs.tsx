@@ -2,7 +2,7 @@ import { addMessage, changeUser, getUser } from '@/configs/Database';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
 import { Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
-import { scale } from '@/configs/Dimensions';
+import { isTabletDevice, scale } from '@/configs/Dimensions';
 import { Dropdown } from 'react-native-element-dropdown';
 import { AntDesign } from '@expo/vector-icons';
 import { User, UserProps } from '@/configs/Types';
@@ -28,6 +28,7 @@ export const UserPrefs = ({
     const [alert, setAlert] = useState('');
     const [showReadyMessage, setShowReadyMessage] = useState<boolean>(false);
     const [oldUser, setOldUser] = useState<User[]>([]);
+    const [isFormValid, setIsFormValid] = useState(false);
 
     const inputRef = useRef<TextInput>(null);
 
@@ -54,6 +55,17 @@ export const UserPrefs = ({
 
         fetchUser()
     }, []);
+
+    useEffect(() => {
+        const isValid = Boolean(
+            user &&
+            character && 
+            characterAccent && 
+            traits.trait1 && 
+            traits.trait2
+        );
+        setIsFormValid(isValid);
+    }, [user, character, characterAccent, traits]);
 
     useEffect(() => {
         if (!isDownloading && !isTTSDownloading && !isSTTDownloading && isModelReady && isTTSModelReady && isSTTModelReady) {
@@ -314,8 +326,8 @@ export const UserPrefs = ({
                             selectedTextStyle={styles.selectedTextStyle}
                             iconStyle={styles.iconStyle}
                             data={trait1Options}
-                            maxHeight={scale(300)}
-                            dropdownPosition='top'
+                            maxHeight={300}
+                            dropdownPosition={isTabletDevice ? 'auto' : 'top'}
                             labelField="label"
                             valueField="value"
                             placeholder="1st trait"
@@ -337,8 +349,8 @@ export const UserPrefs = ({
                             selectedTextStyle={styles.selectedTextStyle}
                             iconStyle={styles.iconStyle}
                             data={trait2Options}
-                            maxHeight={scale(300)}
-                            dropdownPosition='top'
+                            maxHeight={300}
+                            dropdownPosition={isTabletDevice ? 'auto' : 'top'}
                             labelField="label"
                             valueField="value"
                             placeholder="2nd trait"
@@ -356,8 +368,12 @@ export const UserPrefs = ({
                 </View>
             </View>
             <TouchableOpacity 
-                style={styles.button}
+                style={[
+                    styles.button,
+                    !isFormValid && styles.buttonDisabled
+                ]}
                 onPress={onSubmit}
+                disabled={!isFormValid}
             >
                 <Text style={styles.buttonText}>Submit</Text>
             </TouchableOpacity>
@@ -579,6 +595,10 @@ const styles = StyleSheet.create({
     iconStyle: {
       width: 20,
       height: 20,
+    },
+    buttonDisabled: {
+        backgroundColor: '#475569',
+        opacity: 0.5
     },
 })
 

@@ -2,7 +2,7 @@ import { Alert, Image, KeyboardAvoidingView, Platform, StatusBar, StyleSheet, Te
 import { useEffect, useRef, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
 // import { scale } from 'react-native-size-matters'
-import { scale, verticalScale, isTabletDevice } from '@/configs/Dimensions'
+import { scale, isTabletDevice } from '@/configs/Dimensions'
 import { useKeepAwake } from 'expo-keep-awake'
 import MessageInput from '../components/MessageInput';
 import TTSManager from 'my-package-wamo';
@@ -545,13 +545,13 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'stretch',
         backgroundColor: '#131313',
-        paddingTop: verticalScale(10),
+        paddingTop: scale(10),
         paddingHorizontal: isTabletDevice ? scale(40) : scale(20),
     },
     mainContainer: {
         flex: 1,
         flexDirection: 'column',
-        marginTop: verticalScale(30),
+        marginTop: scale(30),
         position: 'relative',
         maxHeight: '100%',
         maxWidth: isTabletDevice ? 800 : '100%',
@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
     },
     messagesContainer: {
         flex: 1,
-        marginTop: verticalScale(5),
+        marginTop: scale(5),
         position: 'relative',
     },
     navBar: {

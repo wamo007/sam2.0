@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, StatusBar, Image, ScrollView, NativeSyntheticEvent, NativeScrollEvent, Dimensions, Pressable } from 'react-native'
 import React, { useRef, useState } from 'react'
 import { LinearGradient } from 'expo-linear-gradient'
-import { scale, verticalScale } from '@/configs/Dimensions'
+import { scale, isTabletDevice } from '@/configs/Dimensions'
 import { onBoardingData } from '@/constants/OnboardingPages'
 import type { onBoardingDataType, TextSegment } from '@/constants/OnboardingPages'
 import AntDesign from '@expo/vector-icons/AntDesign'
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
         width: Dimensions.get('window').width,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: scale(20),
+        paddingHorizontal: isTabletDevice ? 0 : scale(20),
     },
     description: {
         fontSize: scale(16),
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     },
     paginationContainer: {
         position: 'absolute',
-        bottom: verticalScale(60),
+        bottom: scale(60),
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     },
     skipContainer: {
         position: 'absolute',
-        top: verticalScale(45),
+        top: scale(45),
         right: scale(30),
         flexDirection: 'row',
         alignItems: 'center',
