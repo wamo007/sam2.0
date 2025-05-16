@@ -82,6 +82,15 @@ export default function HomeScreen() {
         }
     });
 
+    useEffect(() => {
+        (async () => {
+            if (ttsSubscription) {
+                ttsSubscription.remove();
+                setTtsSubscription(null);
+            }
+        })
+    }, [])
+
     const appendMessage = async (newMessage: string, isDraft: boolean = false) => {
         if (!newMessage.trim()) return;
         
