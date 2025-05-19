@@ -16,6 +16,7 @@ export type User = {
 export interface UserProps {
   handleDownloadModel: (char: string, charAccent:string) => Promise<void>;
   handleDownloadTTSModel: (char: string, charAccent:string) => Promise<void>;
+  handleDownloadSTTModel: () => Promise<void>;
   checkModelExists: () => Promise<boolean | undefined>;
   checkTTSModelExists: () => Promise<boolean | undefined>;
   checkSTTModelExists: () => Promise<boolean | undefined>;

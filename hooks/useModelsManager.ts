@@ -64,12 +64,14 @@ export const useModelsManager = () => {
 
   const checkSTTModelExists = async () => {
     try {
-      const initialFileInfo = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}ggml-base.bin`);
+      const initialFileInfo = await FileSystem.getInfoAsync(`${FileSystem.documentDirectory}ggml-base-q8_0.bin`);
       if (initialFileInfo.exists) {
         console.log("File exists:", true);
         return true;
       }
       console.log('not existing')
+
+      return false;
     } catch (error) {
       console.error("Error checking file existence:", error);
       return false;
@@ -135,8 +137,6 @@ export const useModelsManager = () => {
         setIsTTSDownloading(false);
         setIsTTSModelReady(true);
       }
-    } else {
-      return;
     }
 
     if (!(await checkSTTModelExists())) {
@@ -176,6 +176,24 @@ export const useModelsManager = () => {
     } finally {
       setIsTTSDownloading(false);
       setIsTTSModelReady(true);
+    }
+  };
+
+  const handleDownloadSTTModel = async () => {
+    setProgress(0);
+    setIsSTTModelReady(false);
+    setIsSTTDownloading(true);
+    try {
+      await downloadSTTModel((progress) =>
+        setProgress(progress)
+      );
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      Alert.alert("Error", `Download failed: ${errorMessage}`);
+    } finally {
+      setIsSTTDownloading(false);
+      setIsSTTModelReady(true);
     }
   };
 
@@ -250,6 +268,7 @@ export const useModelsManager = () => {
     checkSTTModelExists,
     handleDownloadModel,
     handleDownloadTTSModel,
+    handleDownloadSTTModel,
     loadModel,
     setIsGenerating,
   };

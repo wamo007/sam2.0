@@ -38,13 +38,13 @@ export const useVoiceRecognition = (props: SpeechRecognitionProps) => {
     }
   }, [])
 
-  const destModelPath = `${FileSystem.documentDirectory}ggml-base.bin`;
+  const destModelPath = `${FileSystem.documentDirectory}ggml-base-q8_0.bin`;
   const options = {
     maxLen: 1,
     language: 'en',
     realtimeAudioSec: 60,
     realtimeAudioSliceSec: 25,
-    audioOutputPath: `${FileSystem.documentDirectory}realtime-record.wav`,
+    // audioOutputPath: `${FileSystem.documentDirectory}realtime-record.wav`,
     audioSessionOnStartIos: {
       category: AudioSessionIos.Category.PlayAndRecord,
       options: [

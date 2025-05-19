@@ -42,7 +42,7 @@ export default function HomeScreen() {
         context, progress, loadModel,
         isModelReady, isTTSModelReady, isSTTModelReady,
         isDownloading, isTTSDownloading, isSTTDownloading,
-        handleDownloadModel, handleDownloadTTSModel,
+        handleDownloadModel, handleDownloadTTSModel, handleDownloadSTTModel,
         checkModelExists, checkTTSModelExists, checkSTTModelExists
     } = useModelsManager();
 
@@ -457,7 +457,8 @@ export default function HomeScreen() {
                         
                         <UserPrefs 
                             checkModelExists={checkModelExists} checkTTSModelExists={checkTTSModelExists} checkSTTModelExists={checkSTTModelExists}
-                            handleDownloadTTSModel={handleDownloadTTSModel} handleDownloadModel={handleDownloadModel} loadModel={loadModel} loadWhisperModel={loadWhisperModel}
+                            handleDownloadSTTModel={handleDownloadSTTModel} handleDownloadTTSModel={handleDownloadTTSModel} handleDownloadModel={handleDownloadModel} 
+                            loadModel={loadModel} loadWhisperModel={loadWhisperModel}
                             isDownloading={isDownloading} isTTSDownloading={isTTSDownloading} isSTTDownloading={isSTTDownloading} progress={progress}
                             isModelReady={isModelReady} isTTSModelReady={isTTSModelReady} isSTTModelReady={isSTTModelReady}
                             openSettings={openSettings} setOpenSettings={setOpenSettings}

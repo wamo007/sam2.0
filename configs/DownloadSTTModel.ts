@@ -8,19 +8,21 @@ export const downloadSTTModel = async (
   // modelUrl: string,
   onProgress: (progress: number) => void
 ): Promise<string> => {
-  
-  const destPathSTT = `${FileSystem.documentDirectory}ggml-base.bin`;
+  const baseDir = FileSystem.documentDirectory!;
+  const destPathSTT = `${FileSystem.documentDirectory}ggml-base-q8_0.bin`;
   const destPathSTTEncoder = `${FileSystem.documentDirectory}ggml-base-encoder.mlmodelc`;
   const destPathSTTEncoderZip = `${FileSystem.documentDirectory}ggml-base-encoder.mlmodelc.zip`;
   // const modelsPath = `${FileSystem.documentDirectory}models`
   try {
-    const fileInfo = await FileSystem.getInfoAsync(destPathSTT);
+    const fileInfo = await FileSystem.readDirectoryAsync(baseDir);
     const mlModelInfo = await FileSystem.getInfoAsync(destPathSTTEncoder);
 
     // If it exists, delete it
-    if (fileInfo.exists) {
-      await FileSystem.deleteAsync(destPathSTT);
-      console.log(`Deleted existing file at ${destPathSTT}`);
+    for (const file of fileInfo) {
+      if (file.endsWith('.bin')) {
+        await FileSystem.deleteAsync(`${FileSystem.documentDirectory}${file}`);
+        console.log(`Deleted existing .bin file: ${file}`);
+      }
     }
 
     if (Platform.OS === 'ios' && mlModelInfo.exists) {
@@ -31,7 +33,7 @@ export const downloadSTTModel = async (
     // console.log("modelUrl : ", modelUrl)
 
     const downloadResumable = FileSystem.createDownloadResumable(
-      `https://huggingface.co/shamil010/mymodel/resolve/main/ggml-base.bin`,
+      `https://huggingface.co/shamil010/mymodel/resolve/main/ggml-base-q8_0.bin`,
       destPathSTT,
       {},
       (downloadProgress) => {

@@ -9,7 +9,7 @@ import { User, UserProps } from '@/configs/Types';
 import * as FileSystem from 'expo-file-system';
 
 export const UserPrefs = ({
-  handleDownloadModel, handleDownloadTTSModel,
+  handleDownloadModel, handleDownloadTTSModel, handleDownloadSTTModel,
   checkModelExists, checkTTSModelExists, checkSTTModelExists,
   loadModel, loadWhisperModel,
   isDownloading, isTTSDownloading, isSTTDownloading,
@@ -91,18 +91,21 @@ export const UserPrefs = ({
                     if (!modelExists && !ttsExists && !sttExists) {
                         setAlert('I need to download my AI and speech models to function properly.');
                         setIsSetup(true);
+                        setOpenSettings(true);
                     } else if (!ttsExists) {
                         setAlertHeader('My voice model is missing or corrupted...');
                         setAlert('I need to re-download the speech model to talk.');
+                        setOpenSettings(false);
                     } else if (!sttExists) {
                         setAlertHeader('Speech recognition model is missing or corrupted...');
                         setAlert('I need to re-download the speech model to talk.');
+                        setOpenSettings(false);
                     } else if (!modelExists) {
                         setAlertHeader('AI model is missing or corrupted...');
                         setAlert('I need to re-download the AI model to function properly.');
+                        setOpenSettings(false);
                     }
                     
-                    setOpenSettings(true);
                     setIsOpen(true);
                     return;
                 }
@@ -160,7 +163,7 @@ export const UserPrefs = ({
     const onConfirm = async () => {
         setIsOpen(false);
         
-        const destPathSTT = `${FileSystem.documentDirectory}ggml-base.en.bin`;
+        const destPathSTT = `${FileSystem.documentDirectory}ggml-base-q8_0.bin`;
         const fileInfo = await FileSystem.getInfoAsync(destPathSTT);
 
         if (!oldUser || !oldUser.length || !fileInfo.exists) {
