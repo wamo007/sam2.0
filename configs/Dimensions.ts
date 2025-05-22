@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Dimensions } from 'react-native';
 import { scale as reactNativeScale } from 'react-native-size-matters';
 
