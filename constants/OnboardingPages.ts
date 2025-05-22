@@ -40,7 +40,7 @@ export const onBoardingData:onBoardingDataType[] = [
             textAlign: 'center',
             fontFamily: 'MegamaxJonathanToo',
         },
-        description: "Powered by advanced local AI that remembers previous interactions and learns naturally while working completely offline.",
+        description: `Powered by AI that works completely offline. \nInclude the term \n"Remember" for Sam to memorize anything!`,
         image: require('../assets/images/LLMem.png'),
     },
     {
