@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
-    "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-navigation/native": "^7.0.14",
     "expo": "~52.0.43",
     "expo-constants": "~17.0.8",
@@ -33,7 +33,7 @@
     "expo-sqlite": "~15.1.4",
     "expo-status-bar": "~2.0.1",
     "expo-system-ui": "~4.0.9",
-    "llama.rn": "^0.5.8",
+    "llama.rn": "^0.5.11",
     "my-package-wamo": "^0.2.2",
     "react": "18.3.1",
     "react-native": "0.76.9",

@@ -42,6 +42,7 @@ export interface UserProps {
   setCharacter: (character: string) => void;
   characterAccent: string;
   setCharacterAccent: (characterAccent: string) => void;
+  isSetup: boolean;
   setIsSetup: (isSetup: boolean) => void;
 }
 

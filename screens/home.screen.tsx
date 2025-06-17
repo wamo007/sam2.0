@@ -463,7 +463,7 @@ export default function HomeScreen() {
                             isModelReady={isModelReady} isTTSModelReady={isTTSModelReady} isSTTModelReady={isSTTModelReady}
                             openSettings={openSettings} setOpenSettings={setOpenSettings}
                             user={user} setUser={setUser} traits={traits} setTraits={setTraits} 
-                            setIsSetup={setIsSetup} character={character} setCharacter={setCharacter} characterAccent={characterAccent} setCharacterAccent={setCharacterAccent}
+                            isSetup={isSetup} setIsSetup={setIsSetup} character={character} setCharacter={setCharacter} characterAccent={characterAccent} setCharacterAccent={setCharacterAccent}
                         />
 
                         { keyboardEnabled && !openSettings &&

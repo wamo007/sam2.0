@@ -1,7 +1,7 @@
 import { addMessage, changeUser, getUser } from '@/configs/Database';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useRef, useState } from 'react';
-import { Image, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
+import { Image, Linking, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native'
 import { isTabletDevice, scale } from '@/configs/Dimensions';
 import { Dropdown } from 'react-native-element-dropdown';
 import { AntDesign } from '@expo/vector-icons';
@@ -20,7 +20,7 @@ export const UserPrefs = ({
   traits, setTraits,
   character, setCharacter,
   characterAccent, setCharacterAccent,
-  setIsSetup
+  isSetup, setIsSetup
 }: UserProps) => {
 
     const [isOpen, setIsOpen] = useState(false);
@@ -174,6 +174,10 @@ export const UserPrefs = ({
         
         const dbUser = await getUser(db);
         setOldUser(dbUser);
+    }
+
+    const onReport = () => {
+        Linking.openURL("mailto: shamo.iskandarov@gmail.com");
     }
 
     const char = [
@@ -370,16 +374,69 @@ export const UserPrefs = ({
                     </View>
                 </View>
             </View>
-            <TouchableOpacity 
-                style={[
-                    styles.button,
-                    !isFormValid && styles.buttonDisabled
-                ]}
-                onPress={onSubmit}
-                disabled={!isFormValid}
+            <View style={styles.traits}>
+                { isSetup ? (
+                        <>
+                            <TouchableOpacity 
+                                style={[
+                                    styles.button,
+                                    {flex: 1, backgroundColor: '#06B6D4'},
+                                    !isFormValid && styles.buttonDisabled
+                                ]}
+                                onPress={onSubmit}
+                                disabled={!isFormValid}
+                            >
+                                <Text style={styles.buttonText}>Submit</Text>
+                            </TouchableOpacity>
+                        </>
+                    ) : (
+                        <>
+                            <TouchableOpacity 
+                                style={[
+                                    styles.button, 
+                                    {flex: 1, minWidth: '48%', borderWidth: 2, borderColor: '#06B6D4', backgroundColor: 'rgba(30, 41, 59, 0.8)'}
+                                ]}
+                                onPress={() => onReport()}
+                            >
+                                <Text style={styles.buttonText}>Report</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={[
+                                    styles.button,
+                                    {flex: 1, minWidth: '48%', backgroundColor: '#06B6D4'},
+                                    !isFormValid && styles.buttonDisabled
+                                ]}
+                                onPress={onSubmit}
+                                disabled={!isFormValid}
+                            >
+                                <Text style={styles.buttonText}>Submit</Text>
+                            </TouchableOpacity>
+                        </>        
+                    )
+                }
+                
+            </View>
+
+            {/* <Modal
+                visible={isReport}
+                transparent
+                animationType='fade'
+                statusBarTranslucent
+                style={{position: 'absolute'}}
             >
-                <Text style={styles.buttonText}>Submit</Text>
-            </TouchableOpacity>
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContainer}>
+                        <Text style={styles.headerText}>{alertHeader}</Text>
+                        <Text style={styles.text}>{alert}</Text>
+                        <TouchableOpacity 
+                            style={styles.button}
+                            onPress={onReport}
+                        >
+                            <Text style={styles.buttonText}>Report an issue</Text>
+                        </TouchableOpacity>
+                    </View>          
+                </View>
+            </Modal> */}
         </View>
     ) : (
         <Modal
@@ -394,7 +451,7 @@ export const UserPrefs = ({
                     <Text style={styles.headerText}>{alertHeader}</Text>
                     <Text style={styles.text}>{alert}</Text>
                     <TouchableOpacity 
-                        style={styles.button}
+                        style={[styles.button, {backgroundColor: '#06B6D4'}]}
                         onPress={onConfirm}
                     >
                         <Text style={styles.buttonText}>Confirm</Text>
@@ -517,7 +574,6 @@ const styles = StyleSheet.create({
     button: {
         borderRadius: scale(8),
         padding: scale(10),
-        backgroundColor: '#06B6D4',
         marginTop: scale(2)
     },
     buttonText: {
